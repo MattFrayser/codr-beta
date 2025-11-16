@@ -90,10 +90,7 @@ export function useWebSocketExecution(): UseWebSocketExecutionResult {
       // Step 2: Connect to WebSocket
       addOutputLine('system', 'Connecting to execution service...');
 
-      const isDev = process.env.NODE_ENV === 'development';
-      const wsUrl = isDev
-        ? 'ws://localhost:8000/ws/execute'
-        : 'wss://codr-websocket.fly.dev/ws/execute';
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/execute';
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
