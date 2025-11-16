@@ -1,9 +1,7 @@
 """
-Central repository for all security blocked patterns used by AST validators.
-
 This file contains all blocked operations, modules, patterns, and identifiers
-for each supported language. All patterns are used by language-specific AST
-validators to prevent dangerous code execution.
+All patterns are used by language-specific AST validators to prevent dangerous 
+acode execution.
 """
 
 # ============================================================================

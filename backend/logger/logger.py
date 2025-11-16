@@ -1,3 +1,7 @@
+"""
+Simple python logger
+"""
+
 import logging
 from config.settings import get_settings
 

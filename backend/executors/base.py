@@ -52,14 +52,22 @@ class BaseExecutor(ABC):
         Returns:
             str: path to file
         """
-        validateFileName(filename)
+        self._validateFileName(filename)
         filepath = os.path.join(tmpDir, filename)
 
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(code)
 
         return filepath
+    def _validateFileName(self, filename: str):
+        """ Validates file name uses appropriate characters """
 
+        if not re.match(r'^[a-zA-Z0-9_.-]+$', filename):
+            raise ValueError(f"Invalid filename: {filename}")
+
+        # Prevent any Traversal
+        if '..' in filename or filename.startswith('/'):
+            raise ValueError(f"Invalid filename: {filename}")
     def _build_sandbox_command(self, command: List[str], workdir: str) -> List[str]:
         """
         Build Firejail sandbox command with security restrictions
@@ -134,7 +142,7 @@ class BaseExecutor(ABC):
             sandbox_command = self._build_sandbox_command(command, workdir)
 
             process = subprocess.Popen(
-                command, # Change to sandbox_command for prod
+                sandbox_command, 
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,

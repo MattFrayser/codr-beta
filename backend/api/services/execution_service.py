@@ -1,7 +1,11 @@
 """
-Execution Service - Handles code execution
-
 Manages the execution of user-submitted code using language-specific executors.
+
+Responsibilities:
+- Retrieve executor for specified language
+- Execute code in sandbox
+- Handle execution errors
+- Update job status through JobService
 """
 
 import asyncio
@@ -14,30 +18,13 @@ from logger.logger import log
 
 
 class ExecutionService:
-    """
-    Manages code execution using language-specific executors
-
-    Responsibilities:
-    - Retrieve executor for specified language
-    - Execute code in sandbox
-    - Handle execution errors
-    - Update job status through JobService
-    """
 
     def __init__(self, job_service: JobService):
-        """
-        Initialize execution service
-
-        Args:
-            job_service: JobService instance for updating job status
-        """
         self.job_service = job_service
 
     async def execute_job_streaming(self, job_id: str, async_input_queue: asyncio.Queue) -> None:
         """
-        Execute a job with PTY streaming - industry standard approach
-
-        This method uses bidirectional streaming:
+        Bidirectional streaming:
         - PTY output → WebSocket (via callback)
         - WebSocket input → PTY (via queue)
 
@@ -48,7 +35,6 @@ class ExecutionService:
         import queue
 
         try:
-            # Fetch job data
             job = await self.job_service.get_job(job_id)
 
             if not job:
@@ -56,19 +42,14 @@ class ExecutionService:
                 await get_pubsub_service().publish_error(job_id, "Job not found")
                 return
 
-            # Mark as processing
             await self.job_service.mark_processing(job_id)
 
-            # Get executor for language
             executor = await asyncio.to_thread(get_executor, job.language)
 
             # Get event loop for scheduling coroutines from sync context
             loop = asyncio.get_event_loop()
 
-            # Create thread-safe queue for sync executor
             sync_input_queue = queue.Queue()
-
-            # Bridge: asyncio.Queue → queue.Queue
             async def bridge_input():
                 """Transfer items from async queue to sync queue"""
                 try:
@@ -81,10 +62,8 @@ class ExecutionService:
             # Start bridge task
             bridge_task = asyncio.create_task(bridge_input())
 
-            # Define output callback - streams PTY output to WebSocket
             def on_output(data: bytes):
-                """Called when PTY produces output - send to WebSocket"""
-                # Schedule coroutine on the event loop
+                """Called when PTY produces output -> send to WebSocket"""
                 asyncio.run_coroutine_threadsafe(
                     get_pubsub_service().publish_output(
                         job_id,
@@ -94,7 +73,6 @@ class ExecutionService:
                     loop
                 )
 
-            # Execute code with streaming in thread pool
             log.info(f"Starting PTY streaming execution for job {job_id}")
             result = await asyncio.to_thread(
                 executor.execute,
@@ -105,13 +83,10 @@ class ExecutionService:
             )
             log.info(f"PTY streaming execution completed for job {job_id}: {result}")
 
-            # Stop bridge task
             bridge_task.cancel()
 
-            # Store result
             await self.job_service.mark_completed(job_id, result)
 
-            # Publish completion
             await get_pubsub_service().publish_complete(
                 job_id,
                 result["exit_code"],
@@ -134,7 +109,6 @@ class ExecutionService:
             else:
                 error_message = "Execution failed"
 
-            # Create error result
             error_result = {
                 "success": False,
                 "stdout": "",
@@ -143,8 +117,6 @@ class ExecutionService:
                 "execution_time": 0
             }
 
-            # Mark as failed
             await self.job_service.mark_failed(job_id, error_message, error_result)
 
-            # Publish error
             await get_pubsub_service().publish_error(job_id, error_message)

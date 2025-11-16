@@ -16,30 +16,27 @@ from api.models.schema import CodeSubmission
 from api.security.validator import CodeValidator
 from logger.logger import log
 from config.settings import get_settings
+from executors import get_executor
 
 router = APIRouter()
 
 
 class ConnectionManager:
-    """Manages WebSocket connections for jobs"""
 
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
 
     async def connect(self, job_id: str, websocket: WebSocket):
-        """Accept and store WebSocket connection"""
         await websocket.accept()
         self.active_connections[job_id] = websocket
         log.info(f"WebSocket connected for job {job_id}")
 
     def disconnect(self, job_id: str):
-        """Remove WebSocket connection"""
         if job_id in self.active_connections:
             del self.active_connections[job_id]
             log.info(f"WebSocket disconnected for job {job_id}")
 
     async def send_message(self, job_id: str, message: Dict[str, Any]):
-        """Send message to specific job WebSocket"""
         if job_id in self.active_connections:
             websocket = self.active_connections[job_id]
             try:
@@ -93,8 +90,6 @@ async def websocket_execute(websocket: WebSocket):
             await websocket.close()
             return
 
-        # Generate filename based on language
-        from executors import get_executor
         try:
             executor = get_executor(language)
             # Get default filename from language config
@@ -120,7 +115,6 @@ async def websocket_execute(websocket: WebSocket):
             await websocket.close()
             return
 
-        # Validate code for security
         validator = CodeValidator()
         is_valid, error_message = validator.validate(submission.code, submission.language)
 
@@ -149,7 +143,6 @@ async def websocket_execute(websocket: WebSocket):
         # Create input queue for bidirectional communication
         input_queue = asyncio.Queue()
 
-        # Get Pub/Sub service
         pubsub_service = get_pubsub_service()
 
         # Define message handler - forwards PTY output to WebSocket
@@ -157,12 +150,10 @@ async def websocket_execute(websocket: WebSocket):
             """Forward Pub/Sub messages to WebSocket"""
             await manager.send_message(job_id, message)
 
-        # Start subscription in background
         subscription_task = asyncio.create_task(
             pubsub_service.subscribe_to_channels(job_id, handle_pubsub_message)
         )
 
-        # Start execution in background with input queue
         execution_service = ExecutionService(job_service)
         execution_task = asyncio.create_task(
             execution_service.execute_job_streaming(job_id, input_queue)

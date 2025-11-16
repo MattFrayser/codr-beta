@@ -2,11 +2,9 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional
 
 from executors import get_supported_languages
-from .validators import validateFileName as validate_filename_util
 
 
 class CodeSubmission(BaseModel):
-    """Model for code submission request"""
 
     code: str = Field(..., min_length=1, max_length=10240, description="Code to execute (max 10KB)")
     language: str = Field(..., description="Programming language")
@@ -15,7 +13,6 @@ class CodeSubmission(BaseModel):
     @field_validator('language')
     @classmethod
     def validate_language(cls, v):
-        """Validate language is supported by querying the executor registry"""
         supported = get_supported_languages()
         if v.lower() not in supported:
             supported_list = ', '.join(sorted(supported))
@@ -25,8 +22,13 @@ class CodeSubmission(BaseModel):
     @field_validator('filename')
     @classmethod
     def validate_filename(cls, v):
-        """Validate filename format"""
-        validate_filename_util(v)
+        import re
+        if not re.match(r'^[a-zA-Z0-9_.-]+$', v):
+            raise ValueError("Filename can only contain alphanumeric characters, dots, hyphens, and underscores")
+        if '..' in v or v.startswith('/'):
+            raise ValueError("Invalid filename: path traversal detected")
+        if len(v) > 255:
+            raise ValueError("Filename too long (max 255 characters)")
         return v
 
     model_config = ConfigDict(

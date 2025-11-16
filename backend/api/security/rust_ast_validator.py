@@ -1,8 +1,11 @@
 """
-Rust AST Validator
-
 Validates Rust code using tree-sitter AST analysis.
-More accurate than regex for detecting unsafe blocks, FFI, and module usage.
+
+Checks for:
+- use declarations of blocked modules (std::fs, std::net, std::process, etc.)
+- unsafe blocks
+- FFI (extern "C", #[no_mangle])
+- Dangerous standard library usage
 """
 
 from tree_sitter import Tree, Node
@@ -12,27 +15,9 @@ from ..models.allowlist import RUST_BLOCKED_OPERATIONS
 
 
 class RustASTValidator(BaseASTValidator):
-    """
-    Validates Rust code using AST analysis
-
-    Checks for:
-    - use declarations of blocked modules (std::fs, std::net, std::process, etc.)
-    - unsafe blocks
-    - FFI (extern "C", #[no_mangle])
-    - Dangerous standard library usage
-    """
 
     def validate(self, tree: Tree, code: str) -> Tuple[bool, str]:
-        """
-        Validate Rust code using AST
 
-        Args:
-            tree: Parsed AST tree
-            code: Original source code
-
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
         self.code_bytes = bytes(code, 'utf8')
         root = tree.root_node
 
@@ -54,17 +39,7 @@ class RustASTValidator(BaseASTValidator):
         return True, ""
 
     def _check_use_declarations(self, root: Node) -> Tuple[bool, str]:
-        """
-        Check use declarations for blocked modules
 
-        Detects:
-        - use std::fs
-        - use std::net
-        - use std::process
-        - use std::os
-        - use std::env
-        - use std::path
-        """
         uses = self.walker.find_nodes_by_type(root, 'use_declaration')
 
         for use in uses:

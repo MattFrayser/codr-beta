@@ -1,8 +1,13 @@
 """
-C/C++ AST Validator
-
 Validates C and C++ code using tree-sitter AST analysis.
-Much more accurate than regex for handling macros, preprocessor directives, etc.
+
+Checks for:
+- Blocked header includes (sys/, unistd.h, etc.)
+- Dangerous function calls (system, exec*, popen, etc.)
+- Inline assembly
+- Socket operations
+- File operations
+- Dynamic loading (dlopen, dlsym)
 """
 
 from tree_sitter import Tree, Node
@@ -15,29 +20,10 @@ from ..models.allowlist import (
 
 
 class CCppASTValidator(BaseASTValidator):
-    """
-    Validates C/C++ code using AST analysis
 
-    Checks for:
-    - Dangerous function calls (system, exec*, popen, etc.)
-    - Blocked header includes (sys/, unistd.h, etc.)
-    - Inline assembly
-    - Socket operations
-    - File operations
-    - Dynamic loading (dlopen, dlsym)
-    """
 
     def validate(self, tree: Tree, code: str) -> Tuple[bool, str]:
-        """
-        Validate C/C++ code using AST
 
-        Args:
-            tree: Parsed AST tree
-            code: Original source code
-
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
         self.code_bytes = bytes(code, 'utf8')
         root = tree.root_node
 
@@ -59,15 +45,7 @@ class CCppASTValidator(BaseASTValidator):
         return True, ""
 
     def _check_function_calls(self, root: Node) -> Tuple[bool, str]:
-        """
-        Check all function calls for dangerous operations
 
-        Detects:
-        - system(), exec*(), popen(), fork()
-        - socket(), connect(), bind()
-        - fopen(), open(), remove()
-        - dlopen(), dlsym()
-        """
         calls = self.walker.find_nodes_by_type(root, 'call_expression')
 
         for call in calls:
@@ -87,15 +65,7 @@ class CCppASTValidator(BaseASTValidator):
         return True, ""
 
     def _check_includes(self, root: Node) -> Tuple[bool, str]:
-        """
-        Check #include directives for dangerous headers
 
-        Detects:
-        - #include <sys/xxx>
-        - #include <unistd.h>
-        - #include <fcntl.h>
-        - #include <dlfcn.h>
-        """
         # Find all preprocessor include directives
         includes = self.walker.find_nodes_by_type(root, 'preproc_include')
 
@@ -113,14 +83,7 @@ class CCppASTValidator(BaseASTValidator):
         return True, ""
 
     def _check_inline_assembly(self, root: Node) -> Tuple[bool, str]:
-        """
-        Check for inline assembly
 
-        Detects:
-        - asm(...)
-        - __asm(...)
-        - __asm__(...)
-        """
         # Look for asm statements (tree-sitter may parse these differently)
         # Check for any node containing 'asm'
         all_nodes = []
@@ -143,8 +106,6 @@ class CCppASTValidator(BaseASTValidator):
 
     def _get_function_name(self, call_node: Node) -> Optional[str]:
         """
-        Extract function name from a call expression
-
         Handles:
         - Direct calls: func()
         - Member calls: obj.method() or obj->method()
@@ -176,19 +137,7 @@ class CCppASTValidator(BaseASTValidator):
         return None
 
     def _get_include_path(self, include_node: Node) -> Optional[str]:
-        """
-        Extract include path from #include directive
 
-        Handles:
-        - #include <header.h>
-        - #include "header.h"
-
-        Args:
-            include_node: preproc_include node
-
-        Returns:
-            Header path or None
-        """
         # Find the string literal or system_lib_string child
         for child in include_node.children:
             if child.type in ['string_literal', 'system_lib_string']:

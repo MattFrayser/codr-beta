@@ -1,6 +1,5 @@
 """
 Application Configuration Management
-
 Uses Pydantic Settings for type-safe configuration with automatic
 environment variable loading and validation.
 """
@@ -56,7 +55,5 @@ def get_settings() -> AppSettings:
     This function is cached to ensure settings are loaded only once
     and reused throughout the application lifecycle.
 
-    Returns:
-        AppSettings: Application configuration
     """
     return AppSettings()

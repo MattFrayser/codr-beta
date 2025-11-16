@@ -1,8 +1,14 @@
+# usual suspects
 .env
-
 __pycache__/
-tests/
 venv/
+
+# Personal notes
 documentation/
+
+# Test coverage
+.coverage
+htmlcov
+coverage.xml
 
 

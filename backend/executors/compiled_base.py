@@ -29,19 +29,7 @@ class CompiledExecutor(BaseExecutor):
         pass
 
     def _build_command(self, filepath: str, workdir: str) -> List[str]:
-        """
-        Compile source code and return executable path
-
-        Args:
-            filepath: Path to source file
-            workdir: Working directory for compilation
-
-        Returns:
-            List containing path to compiled executable
-
-        Raises:
-            Exception: If compilation fails or times out
-        """
+        """ Compile source code and return executable path """
         compiler, flags = self._get_compiler_config()
 
         # output executable path

@@ -1,6 +1,4 @@
 """
-Unified Async Redis Connection Manager
-
 Single async Redis connection for all operations:
 - Job metadata (hash operations)
 - Pub/Sub messaging (real-time communication)

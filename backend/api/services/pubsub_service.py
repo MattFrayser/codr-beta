@@ -1,5 +1,5 @@
 """
-Redis Pub/Sub service for real-time communication between executors and WebSocket clients
+Real-time communication between executors and WebSocket clients
 """
 
 import asyncio
@@ -11,15 +11,12 @@ from logger.logger import log
 
 
 class PubSubService:
-    """Handles Redis Pub/Sub operations for real-time job communication"""
 
     def __init__(self):
         self._pubsubs: Dict[str, aioredis.client.PubSub] = {}
 
     async def publish_output(self, job_id: str, stream: str, data: str):
         """
-        Publish output line to Redis channel
-
         Args:
             job_id: Job identifier
             stream: Either 'stdout' or 'stderr'
@@ -36,14 +33,6 @@ class PubSubService:
         log.debug(f"Published to {channel}: {stream}")
 
     async def publish_complete(self, job_id: str, exit_code: int, execution_time: float):
-        """
-        Publish job completion to Redis channel
-
-        Args:
-            job_id: Job identifier
-            exit_code: Process exit code
-            execution_time: Execution time in seconds
-        """
         redis = await get_async_redis()
         channel = f"job:{job_id}:complete"
         message = json.dumps({
@@ -55,13 +44,6 @@ class PubSubService:
         log.info(f"Published completion for job {job_id}")
 
     async def publish_error(self, job_id: str, error_message: str):
-        """
-        Publish error message to Redis channel
-
-        Args:
-            job_id: Job identifier
-            error_message: Error description
-        """
         redis = await get_async_redis()
         channel = f"job:{job_id}:output"
         message = json.dumps({
@@ -86,7 +68,6 @@ class PubSubService:
         redis = await get_async_redis()
         pubsub = redis.pubsub()
 
-        # Subscribe to all job channels
         channels = [
             f"job:{job_id}:output",
             f"job:{job_id}:complete"
@@ -104,7 +85,7 @@ class PubSubService:
                         data = json.loads(message["data"])
                         await on_message(data)
 
-                        # If job is complete, break the loop
+                        # Break the loop on job completion
                         if data.get("type") == "complete":
                             log.info(f"Job {job_id} completed, stopping subscription")
                             break
@@ -116,12 +97,7 @@ class PubSubService:
             await self.unsubscribe(job_id)
 
     async def unsubscribe(self, job_id: str):
-        """
-        Unsubscribe from job channels and cleanup
 
-        Args:
-            job_id: Job identifier
-        """
         if job_id in self._pubsubs:
             pubsub = self._pubsubs[job_id]
             await pubsub.unsubscribe()
@@ -130,8 +106,6 @@ class PubSubService:
             log.info(f"Unsubscribed from channels for job {job_id}")
 
     async def close(self):
-        """Close all subscriptions"""
-        # Close all pubsubs
         for job_id in list(self._pubsubs.keys()):
             await self.unsubscribe(job_id)
 

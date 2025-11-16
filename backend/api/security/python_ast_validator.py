@@ -1,8 +1,6 @@
 """
 Python AST Validator - validates Python code using built-in AST module.
 
-Uses Python's built-in ast module for parsing and validation.
-This provides the same level of security as tree-sitter for other languages.
 """
 
 import ast
@@ -18,17 +16,7 @@ class PythonASTValidator:
     """Validates Python code using AST analysis"""
 
     def validate(self, code: str) -> Tuple[bool, str]:
-        """
-        Validate Python code is safe to execute
 
-        Args:
-            code: Python source code to validate
-
-        Returns:
-            Tuple of (is_valid, error_message)
-            - (True, "") if code is safe
-            - (False, "error message") if code is dangerous
-        """
         # Parse code into AST
         try:
             tree = ast.parse(code)

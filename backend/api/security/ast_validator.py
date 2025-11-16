@@ -1,9 +1,7 @@
 """
-AST-based code validation using tree-sitter
-
-This module provides infrastructure for parsing and validating code using
-Abstract Syntax Tree (AST) analysis via tree-sitter. This is significantly
-more accurate than regex-based validation and harder to bypass with obfuscation.
+Infrastructure for parsing and validating code using
+Abstract Syntax Tree (AST) analysis via tree-sitter. 
+Significantly more accurate than regex-based validation.
 """
 
 from tree_sitter import Language, Parser, Node, Tree
@@ -16,21 +14,13 @@ import tree_sitter_cpp as ts_cpp
 import tree_sitter_rust as ts_rust
 
 class TreeSitterParser:
-    """
-    Manages tree-sitter parsers for multiple languages
-
-    Provides a unified interface for parsing code in different languages
-    using tree-sitter's language-specific parsers.
-    """
 
     def __init__(self):
-        """Initialize parsers for all supported languages"""
         self.parsers = {}
         self.languages = {}
         self._load_languages()
 
     def _load_languages(self):
-        """Load language grammars and create parsers"""
         language_modules = {
             'javascript': ts_javascript,
             'js': ts_javascript,
@@ -42,8 +32,9 @@ class TreeSitterParser:
 
         for lang_key, module in language_modules.items():
             try:
-                language = Language(module.language())
-                parser = Parser(language)
+                language = Language(module.language(), name=lang_key)
+                parser = Parser()
+                parser.set_language(language)
                 self.languages[lang_key] = language
                 self.parsers[lang_key] = parser
             except Exception as e:
@@ -52,10 +43,6 @@ class TreeSitterParser:
     def parse(self, code: str, language: str) -> Tree:
         """
         Parse code and return AST
-
-        Args:
-            code: Source code to parse
-            language: Programming language (javascript, c, cpp, rust)
 
         Returns:
             tree-sitter Tree object
@@ -80,9 +67,7 @@ class TreeSitterParser:
 
 class ASTWalker:
     """
-    Generic AST tree walker
-
-    Provides utility methods for traversing and querying tree-sitter ASTs.
+    Utility methods for traversing and querying tree-sitter ASTs.
     """
 
     @staticmethod
@@ -124,10 +109,6 @@ class ASTWalker:
         """
         Find all nodes matching any of the specified types
 
-        Args:
-            root: Root node to search from
-            node_types: List of node types to find
-
         Returns:
             List of matching nodes
         """
@@ -143,26 +124,12 @@ class ASTWalker:
 
     @staticmethod
     def get_node_text(node: Node, code: bytes) -> str:
-        """
-        Get the source code text for a node
-
-        Args:
-            node: AST node
-            code: Original source code as bytes
-
-        Returns:
-            Text content of the node
-        """
         return code[node.start_byte:node.end_byte].decode('utf8')
 
     @staticmethod
     def find_child_by_type(node: Node, child_type: str) -> Optional[Node]:
         """
         Find first direct child of specified type
-
-        Args:
-            node: Parent node
-            child_type: Type of child to find
 
         Returns:
             First matching child node, or None
@@ -174,16 +141,6 @@ class ASTWalker:
 
     @staticmethod
     def find_child_by_field(node: Node, field_name: str) -> Optional[Node]:
-        """
-        Find child by field name
-
-        Args:
-            node: Parent node
-            field_name: Name of field
-
-        Returns:
-            Child node for the field, or None
-        """
         return node.child_by_field_name(field_name)
 
 
@@ -191,8 +148,7 @@ class BaseASTValidator(ABC):
     """
     Base class for language-specific AST validators
 
-    Subclasses implement language-specific validation logic
-    by overriding the validate() method.
+    Subclasses override validate() method.
     """
 
     def __init__(self):
@@ -202,16 +158,8 @@ class BaseASTValidator(ABC):
     @abstractmethod
     def validate(self, tree: Tree, code: str) -> Tuple[bool, str]:
         """
-        Validate code using AST analysis
-
-        Args:
-            tree: Parsed AST tree
-            code: Original source code
-
         Returns:
-            Tuple of (is_valid, error_message)
-            - (True, "") if code is safe
-            - (False, "error message") if code is dangerous
+            (is_valid, error_message)
         """
         pass
 
