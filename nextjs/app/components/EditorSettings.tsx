@@ -40,7 +40,7 @@ export function EditorSettings({
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-[#000000] rounded-lg shadow-xl w-96 border border-gray-700">
+      <div className="bg-[#1e1e1e] rounded-lg shadow-xl w-96 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-700">
           <h3 className="text-white font-medium">Editor Settings</h3>

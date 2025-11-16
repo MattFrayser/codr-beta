@@ -22,15 +22,7 @@ Tree-sitter version 0.21.3 (in requirements.txt) has a different API than newer 
 
 ## Solutions
 
-### Option 1: Ignore the warnings (Recommended for now)
-Since Firejail provides the primary security boundary and Python validation works, you can safely ignore these warnings. The code will execute correctly.
-
-### Option 2: Fix the tree-sitter initialization
-Update the AST validator initialization code to match the tree-sitter version. This would require:
-1. Checking the tree-sitter version
-2. Updating parser initialization in `backend/api/security/ast_validator.py`
-
-### Option 3: Upgrade tree-sitter
+### Upgrade tree-sitter
 Update to the latest tree-sitter version and update the parser initialization code accordingly.
 
 ## For Now
@@ -43,11 +35,3 @@ The warnings are **cosmetic** and don't affect functionality. Your code will:
 
 The main async/sync fix is more important, so focus on testing that first!
 
-## Future Enhancement
-
-To fix these warnings properly, we would need to:
-1. Investigate the exact tree-sitter API changes
-2. Update the parser initialization code
-3. Test with all language parsers
-
-This can be done as a separate enhancement after confirming interactive input works correctly.

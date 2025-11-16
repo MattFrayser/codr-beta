@@ -3,8 +3,10 @@ import os
 import tempfile
 import re
 import time
+import traceback
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional, Callable
+
 from config.settings import get_settings
 from logger.logger import log
 
@@ -92,14 +94,14 @@ class BaseExecutor(ABC):
         ] + command
 
     def _format_error_result(self, error: Exception, execution_time: float) -> Dict[str, Any]:
-        """Format error result"""
-        return {
-            "success": False,
-            "stdout": "",
-            "stderr": f"Execution error: {str(error)}",
-            "exit_code": -1,
-            "execution_time": execution_time
-        }
+        return ExecutionResult(
+            success=False,
+            stdout="",
+            stderr=f"Execution error: {str(error)}",
+            exit_code=-1,
+            execution_time=execution_time
+        )
+
 
     def _execute_pty(
         self,
@@ -203,17 +205,17 @@ class BaseExecutor(ABC):
             os.close(master_fd)
             execution_time = time.time() - start_time
 
-            return {
-                "success": process.returncode == 0,
-                "exit_code": process.returncode,
-                "execution_time": execution_time,
-                "stdout": complete_output.decode('utf-8', errors='replace'),
-                "stderr": ""
-            }
+            return ExecutionResult(
+                success=process.returncode == 0,
+                exit_code=process.returncode,
+                execution_time=execution_time,
+                stdout=complete_output.decode('utf-8', errors='replace'),
+                stderr=""
+            )
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            if get_settings().env == 'development': 
+                traceback.print_exc()
             execution_time = time.time() - start_time
             return self._format_error_result(e, execution_time)
 

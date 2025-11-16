@@ -164,13 +164,13 @@ class BaseASTValidator(ABC):
         pass
 
     def _get_node_text(self, node: Node) -> str:
-        """Get text content of a node"""
         return self.walker.get_node_text(node, self.code_bytes)
 
     def _find_child_by_type(self, node: Node, child_type: str) -> Optional[Node]:
-        """Find first child of specified type"""
         return self.walker.find_child_by_type(node, child_type)
 
     def _find_child_by_field(self, node: Node, field_name: str) -> Optional[Node]:
-        """Find child by field name"""
         return self.walker.find_child_by_field(node, field_name)
+
+    def _blocked_operation_error(self, name: str) -> Tuple[bool, str]:
+        return False, f"Blocked operation {name}()"

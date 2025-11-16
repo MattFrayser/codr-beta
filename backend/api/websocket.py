@@ -6,7 +6,7 @@ import asyncio
 import json
 import secrets
 from typing import Dict, Any
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Request
 from fastapi.responses import JSONResponse
 
 
@@ -67,6 +67,8 @@ async def websocket_execute(websocket: WebSocket):
             timeout=5.0  # Prevent connection camping
         )
 
+        # Websocket has custom auth here because websocket will not allow
+        # for HTTP heads 
         settings = get_settings()
         client_api_key = data.get("api_key")
         
@@ -169,7 +171,9 @@ async def websocket_execute(websocket: WebSocket):
 
                 if message.get("type") == "input":
                     input_data = message.get("data", "")
-                    # Put input directly into queue - PTY will consume it
+                    if len(input_data) > settings.max_input_mb:
+                        log.warning(f"Input too large for job {job_id}: {len(input_data)} bytes")
+                        continue
                     await input_queue.put(input_data)
                     log.debug(f"Queued input for job {job_id}: {input_data[:50]}")
                 else:
@@ -178,7 +182,7 @@ async def websocket_execute(websocket: WebSocket):
         except WebSocketDisconnect:
             log.info(f"WebSocket disconnected for job {job_id}")
         except Exception as e:
-            log.error(f"Error in WebSocket message loop: {str(e)}")
+            log.error(f"Error in WebSocket message loop: {_santize_error(e)}")
             await websocket.send_json({
                 "type": "error",
                 "message": f"WebSocket error: {str(e)}"
@@ -187,11 +191,11 @@ async def websocket_execute(websocket: WebSocket):
     except WebSocketDisconnect:
         log.info("WebSocket disconnected before job creation")
     except Exception as e:
-        log.error(f"WebSocket error: {str(e)}")
+        log.error(f"WebSocket error: {_santize_error(e)}")
         try:
             await websocket.send_json({
                 "type": "error",
-                "message": f"Server error: {str(e)}"
+                "message": f"Server error: {_santize_error(e)}"
             })
         except:
             pass
@@ -207,9 +211,16 @@ async def websocket_execute(websocket: WebSocket):
                 pass
 
 
+def _santize_error(error: Exception) -> str:
+    if get_settings().env == 'development':
+        return str(error)
+    else:
+        return "An Error has occured processing your request"
+
 @router.get("/api/websocket/status")
-async def websocket_status():
-    """Get WebSocket connection status"""
+async def websocket_status(request: Request):
+    # Status contains sensitve info, so its protected
+    await verify_api_key(request)
     return JSONResponse(content={
         "active_connections": len(manager.active_connections),
         "job_ids": list(manager.active_connections.keys())

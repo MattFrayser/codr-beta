@@ -89,3 +89,23 @@ class JobResult(BaseModel):
             }
         }
     )
+
+class ExecutionResult(BaseModel):
+    """Model for code execution results"""
+    success: bool
+    stdout: str = ""
+    stderr: str = ""
+    exit_code: int
+    execution_time: float
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "stdout": "Hello, World!\n",
+                "stderr": "",
+                "exit_code": 0,
+                "execution_time": 0.123
+            }
+        }
+    )

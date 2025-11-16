@@ -23,7 +23,7 @@ class PubSubService:
             data: Output data to publish
         """
         redis = await get_async_redis()
-        channel = f"job:{job_id}:output"
+        channel = self._output_channel(job_id)
         message = json.dumps({
             "type": "output",
             "stream": stream,
@@ -34,7 +34,7 @@ class PubSubService:
 
     async def publish_complete(self, job_id: str, exit_code: int, execution_time: float):
         redis = await get_async_redis()
-        channel = f"job:{job_id}:complete"
+        channel = self._complete_channel(job_id)
         message = json.dumps({
             "type": "complete",
             "exit_code": exit_code,
@@ -45,7 +45,7 @@ class PubSubService:
 
     async def publish_error(self, job_id: str, error_message: str):
         redis = await get_async_redis()
-        channel = f"job:{job_id}:output"
+        channel = self._output_channel(job_id)
         message = json.dumps({
             "type": "error",
             "message": error_message
@@ -69,8 +69,8 @@ class PubSubService:
         pubsub = redis.pubsub()
 
         channels = [
-            f"job:{job_id}:output",
-            f"job:{job_id}:complete"
+            self._output_channel(job_id),
+            self._complete_channel(job_id)
         ]
 
         await pubsub.subscribe(*channels)
@@ -111,10 +111,14 @@ class PubSubService:
 
         log.info("Pub/Sub subscriptions closed")
 
+    def _output_channel(self, job_id: str) -> str:
+        return f"job:{job_id}:output"
+
+    def _complete_channel(self, job_id: str) -> str:
+        return f"job:{job_id}:complete"
 
 # Singleton instance
 _pubsub_service: Optional[PubSubService] = None
-
 
 def get_pubsub_service() -> PubSubService:
     """Get or create PubSubService singleton"""
@@ -122,3 +126,5 @@ def get_pubsub_service() -> PubSubService:
     if _pubsub_service is None:
         _pubsub_service = PubSubService()
     return _pubsub_service
+
+

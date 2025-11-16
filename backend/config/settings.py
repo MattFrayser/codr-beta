@@ -25,6 +25,7 @@ class AppSettings(BaseSettings):
     max_memory_mb: int = Field(default=300, description="Maximum memory per execution in MB")
     max_file_size_mb: int = Field(default=1, description="Maximum output file size in MB")
     compilation_timeout: int = Field(default=10, description="Compilation timeout in seconds")
+    max_input_mb: int = Field(default=10000, description="Max input size from terminal in MB")
 
     # Redis Configuration
     redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")

@@ -9,6 +9,7 @@ Responsibilities:
 """
 
 import asyncio
+import traceback
 from typing import Dict, Any
 from .job_service import JobService
 from .pubsub_service import get_pubsub_service
@@ -97,8 +98,9 @@ class ExecutionService:
 
         except Exception as e:
             log.error(f"Streaming job {job_id} failed: {str(e)}")
-            import traceback
-            traceback.print_exc()
+
+            if get_settings().env == 'development': 
+                traceback.print_exc()
 
             # Sanitize error message
             from config.settings import get_settings
