@@ -15,11 +15,17 @@ class TestJavaScriptExecutor:
     """Test suite for JavaScript code execution"""
 
     def test_builds_correct_command(self, javascript_executor):
-        """Should build correct node command"""
+        """Should build correct node command with memory/GC flags"""
         command = javascript_executor._build_command("/tmp/test.js", "/tmp")
 
-        assert command == ["node", "/tmp/test.js"]
-        assert len(command) == 2
+        assert command == [
+            "node",
+            "--max-old-space-size=64",
+            "--no-concurrent-recompilation",
+            "--single-threaded-gc",
+            "/tmp/test.js"
+        ]
+        assert len(command) == 5
 
     def test_validates_filename_format(self, javascript_executor):
         """Should validate filename follows allowed format"""

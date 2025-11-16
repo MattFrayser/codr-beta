@@ -40,11 +40,11 @@ class TestJobServiceOperations:
         job = await job_service.get_job(job_id)
 
         assert job is not None
-        assert job["job_id"] == job_id
-        assert job["code"] == "print('hello')"
-        assert job["language"] == "python"
-        assert job["filename"] == "test.py"
-        assert job["status"] == "queued"
+        assert job.job_id == job_id
+        assert job.code == "print('hello')"
+        assert job.language == "python"
+        assert job.filename == "test.py"
+        assert job.status == "queued"
 
     @pytest.mark.asyncio
     async def test_marks_job_as_processing(self, job_service):
@@ -58,7 +58,7 @@ class TestJobServiceOperations:
         await job_service.mark_processing(job_id)
 
         job = await job_service.get_job(job_id)
-        assert job["status"] == "processing"
+        assert job.status == "processing"
 
     @pytest.mark.asyncio
     async def test_marks_job_as_completed(self, job_service):
@@ -80,7 +80,7 @@ class TestJobServiceOperations:
         await job_service.mark_completed(job_id, result)
 
         job = await job_service.get_job(job_id)
-        assert job["status"] == "completed"
+        assert job.status == "completed"
 
     @pytest.mark.asyncio
     async def test_checks_job_existence(self, job_service):
@@ -111,18 +111,18 @@ class TestJobServiceLifecycle:
             filename="test.py"
         )
         job = await job_service.get_job(job_id)
-        assert job["status"] == "queued"
+        assert job.status == "queued"
 
         # Process
         await job_service.mark_processing(job_id)
         job = await job_service.get_job(job_id)
-        assert job["status"] == "processing"
+        assert job.status == "processing"
 
         # Complete
         result = {"success": True, "exit_code": 0}
         await job_service.mark_completed(job_id, result)
         job = await job_service.get_job(job_id)
-        assert job["status"] == "completed"
+        assert job.status == "completed"
 
     @pytest.mark.asyncio
     async def test_handles_failed_jobs(self, job_service):
@@ -139,4 +139,4 @@ class TestJobServiceLifecycle:
         await job_service.mark_failed(job_id, error_message, result)
 
         job = await job_service.get_job(job_id)
-        assert job["status"] == "failed"
+        assert job.status == "failed"

@@ -17,7 +17,8 @@ from api.middleware.auth import verify_api_key, APIKeyMiddleware
 class TestAPIKeyValidation:
     """Test suite for API key validation"""
 
-    def test_accepts_valid_api_key(self):
+    @pytest.mark.asyncio
+    async def test_accepts_valid_api_key(self):
         """Should accept valid API key"""
         from fastapi import Request
 
@@ -25,9 +26,11 @@ class TestAPIKeyValidation:
         request.headers.get.return_value = "test-api-key-12345"
 
         # Should not raise exception
-        verify_api_key(request)
+        result = await verify_api_key(request)
+        assert result is True
 
-    def test_rejects_invalid_api_key(self):
+    @pytest.mark.asyncio
+    async def test_rejects_invalid_api_key(self):
         """Should reject invalid API key with 403"""
         from fastapi import Request
 
@@ -35,22 +38,23 @@ class TestAPIKeyValidation:
         request.headers.get.return_value = "wrong-api-key"
 
         with pytest.raises(HTTPException) as exc_info:
-            verify_api_key(request)
+            await verify_api_key(request)
 
         assert exc_info.value.status_code == 403
         assert "Invalid API key" in str(exc_info.value.detail)
 
-    def test_rejects_missing_api_key(self):
-        """Should reject missing API key with 403"""
+    @pytest.mark.asyncio
+    async def test_rejects_missing_api_key(self):
+        """Should reject missing API key with 401"""
         from fastapi import Request
 
         request = Mock(spec=Request)
         request.headers.get.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            verify_api_key(request)
+            await verify_api_key(request)
 
-        assert exc_info.value.status_code == 403
+        assert exc_info.value.status_code == 401
 
     def test_uses_constant_time_comparison(self):
         """Should use secrets.compare_digest for timing attack prevention"""
@@ -65,26 +69,61 @@ class TestAPIKeyValidation:
 class TestAuthMiddleware:
     """Test suite for authentication middleware configuration"""
 
-    def test_excludes_health_endpoint(self):
+    @pytest.mark.asyncio
+    async def test_excludes_health_endpoint(self):
         """Should exclude /health from authentication"""
+        from fastapi import Request
+        from unittest.mock import AsyncMock
+
         middleware = APIKeyMiddleware(app=Mock())
 
-        assert "/health" in middleware.excluded_paths
+        # Create mock request for /health
+        request = Mock(spec=Request)
+        request.url.path = "/health"
 
-    def test_excludes_docs_endpoints(self):
+        # Mock call_next
+        call_next = AsyncMock(return_value=Mock())
+
+        # Should call next without checking auth
+        await middleware.dispatch(request, call_next)
+        call_next.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_excludes_docs_endpoints(self):
         """Should exclude documentation endpoints from authentication"""
+        from fastapi import Request
+        from unittest.mock import AsyncMock
+
         middleware = APIKeyMiddleware(app=Mock())
 
-        assert "/docs" in middleware.excluded_paths
-        assert "/redoc" in middleware.excluded_paths
-        assert "/openapi.json" in middleware.excluded_paths
+        # Test /docs endpoint
+        request = Mock(spec=Request)
+        request.url.path = "/docs"
+        call_next = AsyncMock(return_value=Mock())
 
-    def test_protects_api_endpoints(self):
-        """Should protect API endpoints (not in exclusion list)"""
+        await middleware.dispatch(request, call_next)
+        call_next.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_protects_api_endpoints(self):
+        """Should protect API endpoints by requiring authentication"""
+        from fastapi import Request
+        from fastapi.responses import JSONResponse
+        from unittest.mock import AsyncMock
+
         middleware = APIKeyMiddleware(app=Mock())
 
-        # Root endpoint should NOT be in excluded paths
-        assert "/" not in middleware.excluded_paths
+        # Create mock request for protected endpoint
+        request = Mock(spec=Request)
+        request.url.path = "/api/execute"
+        request.headers.get.return_value = None  # No API key
 
-        # WebSocket status should NOT be in excluded paths
-        assert "/api/websocket/status" not in middleware.excluded_paths
+        # Mock call_next
+        call_next = AsyncMock()
+
+        # Should return 401 error without calling next
+        response = await middleware.dispatch(request, call_next)
+
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == 401
+        call_next.assert_not_called()

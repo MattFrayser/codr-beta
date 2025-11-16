@@ -70,7 +70,7 @@ print(result)
         is_valid, error = python_validator.validate(safe_code)
 
         assert is_valid is True
-        assert error is None
+        assert error == ""
 
     def test_allows_safe_imports(self, python_validator):
         """Should allow safe module imports"""
@@ -84,6 +84,7 @@ print(result)
         is_valid, error = python_validator.validate(safe_code)
 
         assert is_valid is True
+        assert error == ""
 
 
 class TestJavaScriptSecurityValidation:
@@ -123,6 +124,7 @@ console.log(result);
         is_valid, error = code_validator.validate(safe_code, "javascript")
 
         assert is_valid is True
+        assert error == ""
 
 
 class TestCodeValidatorDispatch:
