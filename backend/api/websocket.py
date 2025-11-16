@@ -5,6 +5,7 @@ WebSocket endpoint for real-time bidirectional code execution
 import asyncio
 import json
 import secrets
+import time
 from typing import Dict, Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import JSONResponse
@@ -12,7 +13,6 @@ from fastapi.responses import JSONResponse
 
 from api.services import JobService
 from api.services.pubsub_service import get_pubsub_service
-from api.services.execution_service import ExecutionService
 from api.connect.redis_manager import get_async_redis
 from api.models.schema import CodeSubmission
 from api.security.validator import CodeValidator
@@ -153,10 +153,15 @@ async def websocket_execute(websocket: WebSocket):
             pubsub_service.subscribe_to_channels(job_id, handle_pubsub_message)
         )
 
-        execution_service = ExecutionService(job_service)
-        execution_task = asyncio.create_task(
-            execution_service.execute_job_streaming(job_id, input_queue)
-        )
+        await redis.lpush("codr:job_queue", json.dumps({
+            "job_id": job_id,
+            "code": submission.code,
+            "language": submission.language,
+            "filename": submission.filename,
+            "queued_at": time.time()
+        }))
+        
+        log.info(f"Job {job_id} queued for worker (queue depth: {await redis.llen('codr:job_queue')})")
 
         # Handle incoming messages - put input directly into queue
         try:
@@ -167,9 +172,13 @@ async def websocket_execute(websocket: WebSocket):
                     input_data = message.get("data", "")
                     if len(input_data) > settings.max_input_mb:
                         log.warning(f"Input too large for job {job_id}: {len(input_data)} bytes")
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Input too large (max 10KB)"
+                        })
                         continue
-                    await input_queue.put(input_data)
-                    log.debug(f"Queued input for job {job_id}: {input_data[:50]}")
+                    await redis.publish(f"job:{job_id}:input", input_data)
+                    log.debug(f"Published input to worker for job {job_id}: {input_data[:50]}")
                 else:
                     log.warning(f"Unknown message type: {message.get('type')}")
 
@@ -200,9 +209,6 @@ async def websocket_execute(websocket: WebSocket):
             # Cancel tasks if still running
             if 'subscription_task' in locals() and not subscription_task.done():
                 subscription_task.cancel()
-            if 'execution_task' in locals() and not execution_task.done():
-                # Don't cancel execution task as it should complete
-                pass
 
 
 def _santize_error(error: Exception) -> str:
