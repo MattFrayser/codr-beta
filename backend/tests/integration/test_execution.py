@@ -61,7 +61,7 @@ print(greet("World"))
         is_valid, error = code_validator.validate(safe_python, "python")
 
         assert is_valid is True
-        assert error is None
+        assert error == ""
 
 
 class TestExecutorFactory:
@@ -110,18 +110,18 @@ class TestJobServiceIntegration:
             filename="test.py"
         )
         job = await job_service.get_job(job_id)
-        assert job["status"] == "queued"
+        assert job.status == "queued"
 
         # Process
         await job_service.mark_processing(job_id)
         job = await job_service.get_job(job_id)
-        assert job["status"] == "processing"
+        assert job.status == "processing"
 
         # Complete
         result = {"success": True, "exit_code": 0}
         await job_service.mark_completed(job_id, result)
         job = await job_service.get_job(job_id)
-        assert job["status"] == "completed"
+        assert job.status == "completed"
 
     @pytest.mark.asyncio
     async def test_job_creation_with_all_languages(self, job_service):
@@ -137,4 +137,4 @@ class TestJobServiceIntegration:
 
             assert job_id is not None
             job = await job_service.get_job(job_id)
-            assert job["language"] == language
+            assert job.language == language
