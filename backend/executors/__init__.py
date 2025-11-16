@@ -15,6 +15,18 @@ EXECUTORS = {
     'c++': CppExecutor,  # Alias for cpp
 }
 
+LANGUAGE_EXTENSIONS = {
+    "python": ".py",
+    "javascript": ".js",
+    "c": ".c",
+    "cpp": ".cpp",
+    "rust": ".rs"
+}
+
+def get_default_filename(language: str) -> str:
+    return f"main{LANGUAGE_EXTENSIONS.get(language, '.txt')}"
+
+
 
 def get_executor(language: str) -> BaseExecutor:
     """
@@ -57,20 +69,3 @@ def get_supported_languages() -> set:
     return set(EXECUTORS.keys())
 
 
-def is_language_supported(language: str) -> bool:
-    """
-    Check if a language is supported
-
-    Args:
-        language: Programming language name
-
-    Returns:
-        True if language is supported, False otherwise
-
-    Example:
-        >>> is_language_supported('python')
-        True
-        >>> is_language_supported('cobol')
-        False
-    """
-    return language.lower().strip() in EXECUTORS

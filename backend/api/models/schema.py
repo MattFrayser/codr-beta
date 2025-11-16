@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional
 
 from executors import get_supported_languages
+from .validators import validateFileName as validate_filename_util
 
 
 class CodeSubmission(BaseModel):
@@ -25,13 +26,7 @@ class CodeSubmission(BaseModel):
     @classmethod
     def validate_filename(cls, v):
         """Validate filename format"""
-        import re
-        if not re.match(r'^[a-zA-Z0-9_.-]+$', v):
-            raise ValueError("Filename can only contain alphanumeric characters, dots, hyphens, and underscores")
-        if '..' in v or v.startswith('/'):
-            raise ValueError("Invalid filename: path traversal detected")
-        if len(v) > 255:
-            raise ValueError("Filename too long (max 255 characters)")
+        validate_filename_util(v)
         return v
 
     model_config = ConfigDict(

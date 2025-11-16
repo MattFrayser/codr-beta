@@ -10,7 +10,6 @@ validators to prevent dangerous code execution.
 # PYTHON SECURITY PATTERNS
 # ============================================================================
 
-# Python functions/operations that are always blocked
 PYTHON_BLOCKED_OPERATIONS = {
     # Code execution
     'eval', 'exec', 'compile', '__import__',
@@ -26,7 +25,6 @@ PYTHON_BLOCKED_OPERATIONS = {
     'exit', 'quit', 'help',
 }
 
-# Python modules that are always blocked
 PYTHON_BLOCKED_MODULES = {
     # File system and OS
     'os', 'sys', 'io', 'pathlib', 'glob', 'shutil', 'tempfile',
@@ -49,14 +47,12 @@ PYTHON_BLOCKED_MODULES = {
     'pickle', 'shelve', 'marshal', 'dill',
 }
 
-# Dunder attributes that are safe to access
 PYTHON_SAFE_DUNDERS = {'__str__', '__repr__', '__len__', '__init__'}
 
 # ============================================================================
 # JAVASCRIPT SECURITY PATTERNS
 # ============================================================================
 
-# JavaScript operations/functions that are blocked
 JAVASCRIPT_BLOCKED_OPERATIONS = {
     # Code execution
     'eval', 'Function',
@@ -68,7 +64,6 @@ JAVASCRIPT_BLOCKED_OPERATIONS = {
     'process', 'global', '__dirname', '__filename', 'module', 'exports',
 }
 
-# JavaScript Node.js modules that are blocked
 JAVASCRIPT_BLOCKED_MODULES = {
     # File system
     'fs', 'path',
@@ -83,7 +78,6 @@ JAVASCRIPT_BLOCKED_MODULES = {
     'v8', 'vm', 'repl', 'readline',
 }
 
-# Dangerous member expressions and patterns
 JAVASCRIPT_DANGEROUS_PATTERNS = [
     'process.binding',       # Access to internal bindings
     'process.mainModule',    # Access to main module
@@ -93,7 +87,6 @@ JAVASCRIPT_DANGEROUS_PATTERNS = [
     'this.constructor',      # Constructor access via this
 ]
 
-# Standalone identifiers that are blocked
 JAVASCRIPT_BLOCKED_IDENTIFIERS = [
     'process',
     'global',
@@ -105,7 +98,6 @@ JAVASCRIPT_BLOCKED_IDENTIFIERS = [
 # C/C++ SECURITY PATTERNS
 # ============================================================================
 
-# C/C++ dangerous functions
 C_CPP_BLOCKED_FUNCTIONS = {
     # System and process
     'system', 'exec', 'execl', 'execle', 'execlp', 'execv', 'execve',
@@ -122,7 +114,6 @@ C_CPP_BLOCKED_FUNCTIONS = {
     'dlopen', 'dlsym',
 }
 
-# C/C++ dangerous header files
 C_CPP_BLOCKED_HEADERS = [
     'sys/',          # System headers
     'unistd.h',      # Unix system calls
@@ -137,7 +128,6 @@ C_CPP_BLOCKED_HEADERS = [
 # RUST SECURITY PATTERNS
 # ============================================================================
 
-# Rust blocked operations (standard library modules)
 RUST_BLOCKED_OPERATIONS = {
     # File system and I/O
     'std::fs', 'std::io::Write', 'std::io::Read', 'std::path',

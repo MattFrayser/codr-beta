@@ -1,7 +1,7 @@
 """
 Unified Async Redis Connection Manager
 
-Provides a single async Redis connection for all operations:
+Single async Redis connection for all operations:
 - Job metadata (hash operations)
 - Pub/Sub messaging (real-time communication)
 """
@@ -14,21 +14,11 @@ from logger.logger import log
 
 
 class AsyncRedisManager:
-    """Async Redis connection manager with singleton pattern"""
 
     _instance: Optional[aioredis.Redis] = None
 
     @classmethod
     async def get_connection(cls) -> aioredis.Redis:
-        """
-        Get or create async Redis connection
-
-        Returns:
-            aioredis.Redis: Async Redis connection
-
-        Raises:
-            Exception: If Redis connection fails
-        """
         if cls._instance is None:
             settings = get_settings()
             redis_url = settings.redis_url
@@ -57,7 +47,6 @@ class AsyncRedisManager:
                     connection_kwargs["ssl_check_hostname"] = True
                     log.info("Using TLS for Redis connection")
 
-                # Create async Redis connection
                 cls._instance = await aioredis.from_url(redis_url, **connection_kwargs)
 
                 # Test connection
@@ -72,7 +61,6 @@ class AsyncRedisManager:
 
     @classmethod
     async def close_connection(cls):
-        """Close Redis connection and cleanup"""
         if cls._instance:
             await cls._instance.close()
             cls._instance = None
@@ -81,5 +69,4 @@ class AsyncRedisManager:
 
 # Convenience function
 async def get_async_redis() -> aioredis.Redis:
-    """Get async Redis connection"""
     return await AsyncRedisManager.get_connection()

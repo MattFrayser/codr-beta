@@ -24,11 +24,7 @@ class CompiledExecutor(BaseExecutor):
     @abstractmethod
     def _get_compiler_config(self) -> Tuple[str, List[str]]:
         """
-        Get compiler and compilation flags for this language
-
-        Returns:
-            Tuple of (compiler_path, compilation_flags)
-
+        Returns: Tuple of (compiler_path, compilation_flags)
         """
         pass
 

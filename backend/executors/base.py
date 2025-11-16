@@ -3,11 +3,11 @@ import os
 import tempfile
 import re
 import time
-import threading
-import asyncio
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional, Callable
 from config.settings import get_settings
+from api.models.validators import validateFileName
+from logger.logger import log
 
 class BaseExecutor(ABC):
     """Base class for language-specific code executors"""
@@ -52,23 +52,13 @@ class BaseExecutor(ABC):
         Returns:
             str: path to file
         """
-        self._validateFileName(filename)
+        validateFileName(filename)
         filepath = os.path.join(tmpDir, filename)
 
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(code)
 
         return filepath
-
-    def _validateFileName(self, filename: str):
-        """ Validates file name uses appropriate characters """
-
-        if not re.match(r'^[a-zA-Z0-9_.-]+$', filename):
-            raise ValueError(f"Invalid filename: {filename}")
-
-        # Prevent any Traversal
-        if '..' in filename or filename.startswith('/'):
-            raise ValueError(f"Invalid filename: {filename}")
 
     def _build_sandbox_command(self, command: List[str], workdir: str) -> List[str]:
         """
@@ -112,14 +102,9 @@ class BaseExecutor(ABC):
         input_queue: Any
     ) -> Dict[str, Any]:
         """
-        INDUSTRY STANDARD PTY STREAMING
-
         Simple bidirectional pipe:
         - PTY output → on_output callback (sent to WebSocket)
         - input_queue → PTY input (from WebSocket)
-
-        No prompt detection, no waiting, no guessing.
-        Works exactly like xterm.js + node-pty.
 
         Args:
             command: Command to execute
@@ -140,7 +125,6 @@ class BaseExecutor(ABC):
         start_time = time.time()
 
         try:
-            # Create PTY
             master_fd, slave_fd = pty.openpty()
 
             # Set terminal size
@@ -150,7 +134,7 @@ class BaseExecutor(ABC):
             sandbox_command = self._build_sandbox_command(command, workdir)
 
             process = subprocess.Popen(
-                final_command,
+                command, # Change to sandbox_command for prod
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
@@ -171,7 +155,7 @@ class BaseExecutor(ABC):
                 # Check if process finished
                 return_code = process.poll()
                 if return_code is not None:
-                    print(f"[DEBUG] Process exited with code {return_code}")
+                    log.debug(f"Process exited with code {return_code}")
                     # Read any remaining output
                     try:
                         while True:

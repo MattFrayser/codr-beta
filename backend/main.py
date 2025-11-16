@@ -35,6 +35,7 @@ from api.connect.redis_manager import AsyncRedisManager, get_async_redis
 
 # Import settings
 from config.settings import get_settings
+settings = get_settings()
 
 from logger.logger import log
 
@@ -46,17 +47,15 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown events
     """
     try:
-        redis = await get_async_redis()
+        redis_client = await get_async_redis()
     except Exception as e:
         log.error(f"Redis connection failed: {e}")
-
+        raise # Failt fast 
     # Initialize services
     from api.services import JobService
 
-    redis_client = await get_async_redis()
     app.state.job_service = JobService(redis_client)
 
-    settings = get_settings()
     if not settings.api_key:
         log.warning("API key not set")
 
@@ -82,7 +81,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # CORS Configuration
-settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins_list(),
@@ -141,7 +139,6 @@ if __name__ == "__main__":
     import uvicorn
 
     # Get configuration from settings
-    settings = get_settings()
 
     uvicorn.run(
         "main:app",

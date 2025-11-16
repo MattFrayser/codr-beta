@@ -15,6 +15,7 @@ from api.connect.redis_manager import get_async_redis
 from api.models.schema import CodeSubmission
 from api.security.validator import CodeValidator
 from logger.logger import log
+from config.settings import get_settings
 
 router = APIRouter()
 
@@ -52,30 +53,31 @@ manager = ConnectionManager()
 
 @router.websocket("/ws/execute")
 async def websocket_execute(websocket: WebSocket):
-    """
-    Message Protocol:
-    - Client -> Server: {"type": "execute", "code": "...", "language": "..."}
-    - Client -> Server: {"type": "input", "data": "user input\\n"}
-    - Server -> Client: {"type": "output", "stream": "stdout", "data": "..."}
-    - Server -> Client: {"type": "complete", "exit_code": 0, "execution_time": 1.23}
-    - Server -> Client: {"type": "error", "message": "..."}
-    """
+    """ websocket endpoint """
+
     job_id: str = None
 
     try:
-        # Accept connection initially (before we have job_id)
+        
         await websocket.accept()
-        log.info("WebSocket connection accepted, waiting for execute message")
+        log.debug("WebSocket connection accepted, waiting for execute message")
 
-        # Wait for execute message
-        data = await websocket.receive_json()
+        data = await asyncio.wait_for(
+            websocket.receive_json(),
+            timeout=5.0  # Prevent connection camping
+        )
 
-        if data.get("type") != "execute":
-            await websocket.send_json({
-                "type": "error",
-                "message": "First message must be of type 'execute'"
-            })
-            await websocket.close()
+        settings = get_settings()
+        client_api_key = data.get("api_key")
+        
+        if not client_api_key:
+            await websocket.send_json({"type": "error", "message": "API key required"})
+            await websocket.close(code=1008)
+            return
+        
+        if not secrets.compare_digest(client_api_key, settings.api_key):
+            await websocket.send_json({"type": "error", "message": "Invalid API key"})
+            await websocket.close(code=1008)
             return
 
         # Extract code submission data

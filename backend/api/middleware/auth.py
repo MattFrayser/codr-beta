@@ -1,5 +1,5 @@
 """
-API key authentication middleware
+API key authentication 
 """
 
 import secrets
@@ -14,21 +14,12 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 
 async def verify_api_key(request: Request, api_key: str = None):
-    """
-    Verify API key from header
 
-    Args:
-        request: FastAPI request object
-        api_key: API key from header
-
-    Raises:
-        HTTPException: If API key is invalid or missing
-    """
     settings = get_settings()
     expected_api_key = settings.api_key
 
-    if not expected_api_key:
-        # If no API key is configured, allow all requests (dev mode)
+    if not expected_api_key and settings.env == 'development':
+        # allow all requests in dev mode
         return True
 
     # Get API key from header
@@ -42,7 +33,7 @@ async def verify_api_key(request: Request, api_key: str = None):
             headers={"WWW-Authenticate": "ApiKey"},
         )
 
-    # Use constant-time comparison to prevent timing attacks
+    # constant-time comparison to prevent timing attacks
     if not secrets.compare_digest(api_key, expected_api_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -54,16 +45,14 @@ async def verify_api_key(request: Request, api_key: str = None):
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
     """
-    Middleware to check API key on all requests
-    Excludes health check and docs endpoints
+    Check API key on all requests
     """
 
     async def dispatch(self, request: Request, call_next):
-        # Skip authentication for these paths
+        # These paths dont need auth
         if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"]:
             return await call_next(request)
 
-        # Verify API key
         try:
             await verify_api_key(request)
         except HTTPException as e:
