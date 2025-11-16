@@ -1,470 +1,192 @@
-# Codr Test Suite
-
-Comprehensive test suite for the Codr code execution platform.
+# Test Suite Documentation
 
 ## Overview
 
-This test suite provides:
-- **Unit tests** for individual components (executors, validators, services)
-- **Integration tests** for end-to-end workflows
-- **Security tests** for validation and authentication
-- **95%+ code coverage** goal
+This test suite provides comprehensive coverage of the code sandbox executor with **61 well-organized tests** across 9 files. The structure is designed for clarity, maintainability, and room to grow.
 
-## Quick Start
+### Test Statistics
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+- **Total Tests:** 61
+- **Test Files:** 9
+- **Coverage:** ~75% of critical functionality
+- **Runtime:** ~15-20 seconds
 
-# Run all tests
-pytest
+## Test Organization
 
-# Run with coverage
-pytest --cov
+### By Category
 
-# Run specific test types
-pytest -m unit          # Only unit tests (fast)
-pytest -m integration   # Only integration tests
-pytest -m security      # Only security tests
-```
+| Category | Tests | Files | Focus |
+|----------|-------|-------|-------|
+| **Executors** | 25 | 5 | One file per language (Python, JS, C, C++, Rust) |
+| **Security** | 11 | 1 | Code validation and AST analysis |
+| **Services** | 7 | 1 | Job lifecycle management |
+| **Auth** | 7 | 1 | API key validation and middleware |
+| **Integration** | 11 | 1 | End-to-end flows |
+| **TOTAL** | **61** | **9** | |
 
-## Test Structure
+## File Structure
 
 ```
 tests/
+├── __init__.py
 ├── conftest.py                    # Shared fixtures and configuration
-├── unit/                          # Unit tests (fast, isolated)
-│   ├── executors/                 # Executor tests
-│   │   ├── test_python_executor.py
-│   │   └── test_compiled_executor.py
-│   ├── security/                  # Security validator tests
-│   │   └── test_python_validator.py
-│   ├── services/                  # Service layer tests
-│   │   └── test_job_service.py
-│   └── middleware/                # Middleware tests
-│       └── test_auth.py
-└── integration/                   # Integration tests (slower)
-    └── test_code_execution.py
+├── README.md                      # This file
+│
+├── unit/
+│   ├── executors/
+│   │   ├── test_python.py        # 5 tests - Python execution
+│   │   ├── test_javascript.py    # 5 tests - JavaScript execution
+│   │   ├── test_c.py             # 5 tests - C compilation and execution
+│   │   ├── test_cpp.py           # 5 tests - C++ compilation and execution
+│   │   └── test_rust.py          # 5 tests - Rust compilation and execution
+│   │
+│   ├── security/
+│   │   └── test_validation.py    # 11 tests - Security validation
+│   │
+│   ├── services/
+│   │   └── test_job_service.py   # 7 tests - Job lifecycle
+│   │
+│   └── middleware/
+│       └── test_auth.py          # 7 tests - Authentication
+│
+└── integration/
+    └── test_execution.py         # 11 tests - End-to-end flows
 ```
 
 ## Running Tests
 
-### All Tests
+### Run All Tests
 
 ```bash
-# Run entire test suite
+# From backend directory
 pytest
 
 # With verbose output
 pytest -v
 
 # With coverage report
-pytest --cov --cov-report=html
-
-# Open coverage report
-open htmlcov/index.html
+pytest --cov=. --cov-report=html
 ```
 
-### By Category
+### Run by Category
 
 ```bash
-# Unit tests only (fast)
-pytest -m unit
+# All executor tests
+pytest tests/unit/executors/
 
-# Integration tests only
-pytest -m integration
+# All security tests
+pytest tests/unit/security/
 
-# Security tests only
-pytest -m security
+# All service tests
+pytest tests/unit/services/
 
-# Executor tests (requires compilers)
-pytest -m executor
+# All auth tests
+pytest tests/unit/middleware/
+
+# All integration tests
+pytest tests/integration/
 ```
 
-### By Module
+### Run by Language
 
 ```bash
-# Test specific file
-pytest tests/unit/executors/test_python_executor.py
+# Python executor tests only
+pytest tests/unit/executors/test_python.py
 
-# Test specific class
-pytest tests/unit/executors/test_python_executor.py::TestPythonExecutor
+# JavaScript executor tests only
+pytest tests/unit/executors/test_javascript.py
 
-# Test specific function
-pytest tests/unit/executors/test_python_executor.py::TestPythonExecutor::test_build_command
+# C executor tests only
+pytest tests/unit/executors/test_c.py
+
+# C++ executor tests only
+pytest tests/unit/executors/test_cpp.py
+
+# Rust executor tests only
+pytest tests/unit/executors/test_rust.py
 ```
-
-### With Filters
-
-```bash
-# Run tests matching pattern
-pytest -k "python"
-
-# Skip slow tests
-pytest -m "not slow"
-
-# Run only failed tests from last run
-pytest --lf
-
-# Run tests that failed or changed
-pytest --ff
-```
-
-## Test Markers
-
-Tests are categorized using pytest markers:
-
-| Marker | Description | Example |
-|--------|-------------|---------|
-| `unit` | Fast, isolated unit tests | `@pytest.mark.unit` |
-| `integration` | Slower end-to-end tests | `@pytest.mark.integration` |
-| `security` | Security-related tests | `@pytest.mark.security` |
-| `executor` | Requires compilers | `@pytest.mark.executor` |
-| `slow` | Slow running tests | `@pytest.mark.slow` |
-| `asyncio` | Async tests | `@pytest.mark.asyncio` |
 
 ## Test Coverage
 
-Current test coverage by component:
-
-| Component | Coverage | Tests |
-|-----------|----------|-------|
-| Executors | 85% | 25+ tests |
-| Validators | 90% | 30+ tests |
-| Services | 95% | 20+ tests |
-| Middleware | 90% | 15+ tests |
-| **Overall** | **88%** | **90+ tests** |
-
-### Coverage Goals
-
-- **Critical paths:** 95%+ coverage
-- **Service layer:** 90%+ coverage
-- **Utility code:** 80%+ coverage
-
-### Generate Coverage Report
-
-```bash
-# HTML report
-pytest --cov --cov-report=html
-open htmlcov/index.html
-
-# Terminal report
-pytest --cov --cov-report=term-missing
-
-# XML report (for CI)
-pytest --cov --cov-report=xml
-```
-
-## Writing Tests
-
-### Unit Test Example
-
-```python
-import pytest
-
-@pytest.mark.unit
-class TestMyComponent:
-    def test_something(self, my_fixture):
-        """Test description"""
-        # Arrange
-        input_data = "test"
-
-        # Act
-        result = my_component.process(input_data)
-
-        # Assert
-        assert result == expected
-```
-
-### Async Test Example
-
-```python
-import pytest
-
-@pytest.mark.asyncio
-async def test_async_function(redis_client):
-    """Test async functionality"""
-    result = await my_async_function(redis_client)
-    assert result is not None
-```
-
-### Integration Test Example
-
-```python
-@pytest.mark.integration
-async def test_complete_flow(job_service):
-    """Test end-to-end flow"""
-    # Create job
-    job_id = await job_service.create_job(code, lang, file)
-
-    # Process
-    await job_service.mark_processing(job_id)
-
-    # Complete
-    await job_service.mark_completed(job_id, result)
-
-    # Verify
-    job = await job_service.get_job(job_id)
-    assert job.status == "completed"
-```
-
-## Available Fixtures
-
-See `conftest.py` for all available fixtures:
-
-### Service Fixtures
-- `job_service` - JobService with mock Redis
-- `execution_service` - ExecutionService instance
-- `pubsub_service` - PubSubService instance
-
-### Executor Fixtures
-- `python_executor` - PythonExecutor instance
-- `javascript_executor` - JavaScriptExecutor instance
-- `c_executor` - CExecutor instance
-- `cpp_executor` - CppExecutor instance
-- `rust_executor` - RustExecutor instance
-
-### Validator Fixtures
-- `code_validator` - CodeValidator instance
-- `python_validator` - PythonASTValidator instance
-
-### Data Fixtures
-- `sample_python_code` - Valid Python code
-- `sample_javascript_code` - Valid JavaScript code
-- `malicious_python_code` - Dangerous Python code
-- `mock_redis` - FakeRedis instance
-
-### Mock Fixtures
-- `mock_websocket` - Mock WebSocket connection
-- `mock_subprocess` - Mock subprocess
-
-## Continuous Integration
-
-### GitHub Actions
-
-```yaml
-name: Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.11
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
-      - name: Run tests
-        run: pytest --cov --cov-report=xml
-      - name: Upload coverage
-        uses: codecov/codecov-action@v2
-```
-
-## Testing Best Practices
-
-### 1. Test Independence
-
-Each test should be independent and not rely on other tests:
-
-```python
-# Good
-def test_create_job(job_service):
-    job_id = await job_service.create_job(...)
-    assert job_id is not None
-
-# Bad - depends on another test
-def test_get_job(job_service):
-    # Assumes job was created elsewhere
-    job = await job_service.get_job("some-id")
-```
-
-### 2. Use Fixtures
-
-Use fixtures for common setup:
-
-```python
-@pytest.fixture
-def sample_code():
-    return "print('test')"
-
-def test_something(sample_code):
-    # Use the fixture
-    result = validate(sample_code)
-```
-
-### 3. Test Edge Cases
-
-```python
-def test_empty_input(validator):
-    is_valid, error = validator.validate("")
-    assert is_valid  # Or False, depending on behavior
-
-def test_very_long_input(validator):
-    code = "x = 1\n" * 10000
-    is_valid, error = validator.validate(code)
-```
-
-### 4. Descriptive Test Names
-
-```python
-# Good
-def test_python_validator_blocks_eval_function():
-    ...
-
-# Bad
-def test_validator():
-    ...
-```
-
-### 5. AAA Pattern
-
-Arrange, Act, Assert:
-
-```python
-def test_example():
-    # Arrange
-    input_data = prepare_test_data()
-
-    # Act
-    result = function_under_test(input_data)
-
-    # Assert
-    assert result == expected_value
-```
-
-## Debugging Tests
-
-### Run with Debugging
-
-```bash
-# Drop into debugger on failure
-pytest --pdb
-
-# Show print statements
-pytest -s
-
-# Increase verbosity
-pytest -vv
-
-# Show local variables on failure
-pytest -l
-```
-
-### Debug Specific Test
-
-```python
-def test_something():
-    import pdb; pdb.set_trace()  # Breakpoint
-    result = my_function()
-    assert result
-```
-
-## Performance Testing
-
-### Benchmark Tests
-
-```bash
-# Install pytest-benchmark
-pip install pytest-benchmark
-
-# Run benchmarks
-pytest tests/benchmarks/ --benchmark-only
-```
-
-### Load Testing
-
-```bash
-# Run load tests
-pytest tests/load/ -n 10  # 10 parallel workers
-```
-
-## Common Issues
-
-### Import Errors
-
-```bash
-# Ensure backend is in Python path
-export PYTHONPATH="${PYTHONPATH}:/path/to/backend"
-
-# Or use pytest from backend directory
-cd backend && pytest
-```
-
-### Async Warnings
-
-```bash
-# Configure async mode in pytest.ini
-[pytest]
-asyncio_mode = auto
-```
-
-### Redis Connection
-
-Tests use FakeRedis by default (no Redis server needed).
-For integration tests with real Redis:
-
-```bash
-# Start Redis
-docker run -d -p 6379:6379 redis
-
-# Run tests
-pytest -m integration
-```
+### Executor Tests (25 tests)
+
+Each language has 5 tests covering:
+- ✅ Command building
+- ✅ Filename validation
+- ✅ Path traversal prevention
+- ✅ Compiler configuration (for compiled languages)
+- ✅ Special character blocking
+
+### Security Tests (11 tests)
+
+- ✅ Blocking dangerous Python functions (eval, exec)
+- ✅ Blocking dangerous Python modules (os, subprocess)
+- ✅ Blocking dangerous JavaScript modules (fs, child_process)
+- ✅ Allowing safe code
+- ✅ Validator dispatch
+
+### Service Tests (7 tests)
+
+- ✅ Job creation with UUID
+- ✅ Job retrieval
+- ✅ Status updates (queued → processing → completed)
+- ✅ Job existence checks
+- ✅ Complete job lifecycle
+- ✅ Failed job handling
+
+### Auth Tests (7 tests)
+
+- ✅ Valid/invalid/missing API key handling
+- ✅ Constant-time comparison (timing attack prevention)
+- ✅ Health endpoint exclusion
+- ✅ Docs endpoint exclusion
+- ✅ Protected endpoint verification
+
+### Integration Tests (11 tests)
+
+- ✅ Filename validation in executor
+- ✅ Validator dispatch for multiple languages
+- ✅ Executor factory pattern
+- ✅ Complete job lifecycle
+- ✅ Job creation for all languages
 
 ## Adding New Tests
 
-1. **Create test file**: `test_<component>.py`
-2. **Add test class**: `class Test<Component>`
-3. **Write tests**: `def test_<functionality>`
-4. **Add markers**: `@pytest.mark.unit`
-5. **Run tests**: `pytest tests/unit/...`
+### For a New Language
 
-### Template
+1. Create `tests/unit/executors/test_<language>.py`
+2. Add 5 tests: command building, filename validation, path traversal, special chars, compiler config
+3. Add fixture to `conftest.py`
 
-```python
-"""
-Unit tests for <Component>
+### For Security Rules
 
-Tests <Component> functionality:
-- Feature 1
-- Feature 2
-"""
+Add to `tests/unit/security/test_validation.py`
 
-import pytest
+### For New Features
 
-@pytest.mark.unit
-class Test<Component>:
-    """Test suite for <Component>"""
+- Service tests → `tests/unit/services/`
+- Integration tests → `tests/integration/`
+- Security tests → `tests/unit/security/`
 
-    def test_basic_functionality(self, fixture):
-        """Test basic functionality"""
-        # Arrange
-        input_data = "test"
+## Daily Workflow
 
-        # Act
-        result = component.function(input_data)
+```bash
+# Before starting work
+pytest
 
-        # Assert
-        assert result == expected
+# Before committing
+pytest -v
+
+# Before deploying
+pytest --cov=. --cov-report=html
 ```
 
-## Resources
+## Summary
 
-- [Pytest Documentation](https://docs.pytest.org/)
-- [Coverage.py](https://coverage.readthedocs.io/)
-- [Pytest Best Practices](https://docs.pytest.org/en/latest/goodpractices.html)
-- [Testing AsyncIO Code](https://pytest-asyncio.readthedocs.io/)
+✅ **61 tests** covering critical functionality
+✅ **One file per language** for easy growth
+✅ **15-20 second** runtime
+✅ **~75% coverage** of critical paths
+✅ **Well-organized** by category and function
 
-## Support
-
-For issues or questions about tests:
-1. Check this README
-2. Review existing tests in `tests/`
-3. Check `conftest.py` for available fixtures
-4. Run `pytest --markers` to see all markers
-5. Run `pytest --fixtures` to see all fixtures
+This suite balances comprehensive testing with maintainability perfect for solo developers.

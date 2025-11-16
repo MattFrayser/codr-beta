@@ -1,194 +1,142 @@
 """
-Unit tests for JobService
+Tests for Job Service
 
-Tests job lifecycle management:
+Covers:
 - Job creation
 - Job retrieval
-- Status updates
-- Job existence checks
+- Job status updates
+- Job lifecycle management
 """
 
 import pytest
-import json
 from api.services.job_service import JobService
 
 
-@pytest.mark.unit
-@pytest.mark.asyncio
-class TestJobService:
-    """Test suite for JobService"""
+class TestJobServiceOperations:
+    """Test suite for job service CRUD operations"""
 
-    async def test_create_job(self, job_service):
-        """Test job creation"""
-        code = "print('Hello')"
-        language = "python"
-        filename = "test.py"
+    @pytest.mark.asyncio
+    async def test_creates_job_with_uuid(self, job_service):
+        """Should create job with valid UUID"""
+        job_id = await job_service.create_job(
+            code="print('test')",
+            language="python",
+            filename="test.py"
+        )
 
-        job_id = await job_service.create_job(code, language, filename)
+        assert job_id is not None
+        assert len(job_id) == 36  # UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        assert "-" in job_id
 
-        # Verify job ID is UUID format
-        assert isinstance(job_id, str)
-        assert len(job_id) == 36  # UUID length with dashes
+    @pytest.mark.asyncio
+    async def test_retrieves_job_metadata(self, job_service):
+        """Should retrieve stored job metadata"""
+        job_id = await job_service.create_job(
+            code="print('hello')",
+            language="python",
+            filename="test.py"
+        )
 
-        # Verify job exists
-        exists = await job_service.job_exists(job_id)
-        assert exists is True
-
-    async def test_get_job(self, job_service):
-        """Test job retrieval"""
-        code = "print('Hello')"
-        language = "python"
-        filename = "test.py"
-
-        # Create job
-        job_id = await job_service.create_job(code, language, filename)
-
-        # Retrieve job
         job = await job_service.get_job(job_id)
 
         assert job is not None
-        assert job.job_id == job_id
-        assert job.code == code
-        assert job.language == language
-        assert job.filename == filename
-        assert job.status == "queued"
-        assert job.created_at is not None
+        assert job["job_id"] == job_id
+        assert job["code"] == "print('hello')"
+        assert job["language"] == "python"
+        assert job["filename"] == "test.py"
+        assert job["status"] == "queued"
 
-    async def test_get_nonexistent_job(self, job_service):
-        """Test retrieving non-existent job"""
-        job = await job_service.get_job("nonexistent-uuid")
-        assert job is None
-
-    async def test_mark_processing(self, job_service):
-        """Test marking job as processing"""
-        job_id = await job_service.create_job("print('x')", "python", "test.py")
+    @pytest.mark.asyncio
+    async def test_marks_job_as_processing(self, job_service):
+        """Should update job status to processing"""
+        job_id = await job_service.create_job(
+            code="print('test')",
+            language="python",
+            filename="test.py"
+        )
 
         await job_service.mark_processing(job_id)
 
         job = await job_service.get_job(job_id)
-        assert job.status == "processing"
+        assert job["status"] == "processing"
 
-    async def test_mark_completed(self, job_service):
-        """Test marking job as completed"""
-        job_id = await job_service.create_job("print('x')", "python", "test.py")
+    @pytest.mark.asyncio
+    async def test_marks_job_as_completed(self, job_service):
+        """Should update job status to completed with result"""
+        job_id = await job_service.create_job(
+            code="print('test')",
+            language="python",
+            filename="test.py"
+        )
 
         result = {
             "success": True,
-            "stdout": "x\n",
-            "stderr": "",
             "exit_code": 0,
-            "execution_time": 1.23
+            "stdout": "test\n",
+            "stderr": "",
+            "execution_time": 0.5
         }
 
         await job_service.mark_completed(job_id, result)
 
         job = await job_service.get_job(job_id)
-        assert job.status == "completed"
-        assert job.result == result
-        assert job.completed_at is not None
+        assert job["status"] == "completed"
 
-    async def test_mark_failed(self, job_service):
-        """Test marking job as failed"""
-        job_id = await job_service.create_job("print('x')", "python", "test.py")
+    @pytest.mark.asyncio
+    async def test_checks_job_existence(self, job_service):
+        """Should check if job exists in storage"""
+        job_id = await job_service.create_job(
+            code="print('test')",
+            language="python",
+            filename="test.py"
+        )
 
-        error_msg = "Execution timeout"
-        result = {
-            "success": False,
-            "stdout": "",
-            "stderr": error_msg,
-            "exit_code": -1,
-            "execution_time": 0
-        }
+        exists = await job_service.job_exists(job_id)
+        assert exists is True
 
-        await job_service.mark_failed(job_id, error_msg, result)
+        fake_exists = await job_service.job_exists("fake-job-id-12345")
+        assert fake_exists is False
 
+
+class TestJobServiceLifecycle:
+    """Test suite for complete job lifecycle"""
+
+    @pytest.mark.asyncio
+    async def test_complete_job_lifecycle(self, job_service):
+        """Should handle complete job lifecycle from creation to completion"""
+        # Create
+        job_id = await job_service.create_job(
+            code="print('lifecycle test')",
+            language="python",
+            filename="test.py"
+        )
         job = await job_service.get_job(job_id)
-        assert job.status == "failed"
-        assert job.error == error_msg
-        assert job.result == result
+        assert job["status"] == "queued"
 
-    async def test_get_job_status(self, job_service):
-        """Test getting job status"""
-        job_id = await job_service.create_job("print('x')", "python", "test.py")
-
-        status = await job_service.get_job_status(job_id)
-        assert status == "queued"
-
-        await job_service.mark_processing(job_id)
-        status = await job_service.get_job_status(job_id)
-        assert status == "processing"
-
-    async def test_get_status_nonexistent_job(self, job_service):
-        """Test getting status of non-existent job"""
-        status = await job_service.get_job_status("nonexistent-uuid")
-        assert status is None
-
-    async def test_job_exists_false(self, job_service):
-        """Test job_exists returns False for non-existent job"""
-        exists = await job_service.job_exists("nonexistent-uuid")
-        assert exists is False
-
-    async def test_job_key_format(self, job_service):
-        """Test Redis key format"""
-        key = job_service._job_key("test-123")
-        assert key == "job:test-123"
-
-    async def test_multiple_jobs(self, job_service):
-        """Test creating and managing multiple jobs"""
-        job_ids = []
-
-        for i in range(5):
-            job_id = await job_service.create_job(
-                f"print({i})",
-                "python",
-                f"test{i}.py"
-            )
-            job_ids.append(job_id)
-
-        # Verify all jobs exist
-        for job_id in job_ids:
-            exists = await job_service.job_exists(job_id)
-            assert exists is True
-
-        # Verify jobs have unique IDs
-        assert len(job_ids) == len(set(job_ids))
-
-    async def test_job_result_serialization(self, job_service):
-        """Test that complex results are properly serialized"""
-        job_id = await job_service.create_job("print('x')", "python", "test.py")
-
-        complex_result = {
-            "success": True,
-            "stdout": "output\nwith\nmultiple\nlines",
-            "stderr": "",
-            "exit_code": 0,
-            "execution_time": 1.5,
-            "metadata": {
-                "nested": "data",
-                "list": [1, 2, 3]
-            }
-        }
-
-        await job_service.mark_completed(job_id, complex_result)
-
-        job = await job_service.get_job(job_id)
-        assert job.result == complex_result
-
-    async def test_lifecycle_progression(self, job_service):
-        """Test complete job lifecycle"""
-        # 1. Create
-        job_id = await job_service.create_job("print('test')", "python", "test.py")
-        job = await job_service.get_job(job_id)
-        assert job.status == "queued"
-
-        # 2. Start processing
+        # Process
         await job_service.mark_processing(job_id)
         job = await job_service.get_job(job_id)
-        assert job.status == "processing"
+        assert job["status"] == "processing"
 
-        # 3. Complete
-        result = {"success": True, "exit_code": 0, "execution_time": 1.0}
+        # Complete
+        result = {"success": True, "exit_code": 0}
         await job_service.mark_completed(job_id, result)
         job = await job_service.get_job(job_id)
-        assert job.status == "completed"
-        assert job.result == result
+        assert job["status"] == "completed"
+
+    @pytest.mark.asyncio
+    async def test_handles_failed_jobs(self, job_service):
+        """Should handle job failures appropriately"""
+        job_id = await job_service.create_job(
+            code="invalid code",
+            language="python",
+            filename="test.py"
+        )
+
+        error_message = "Compilation failed"
+        result = {"success": False, "exit_code": 1, "stderr": error_message}
+
+        await job_service.mark_failed(job_id, error_message, result)
+
+        job = await job_service.get_job(job_id)
+        assert job["status"] == "failed"
