@@ -4,7 +4,6 @@ Single async Redis connection for all operations:
 - Pub/Sub messaging (real-time communication)
 """
 
-import ssl
 import redis.asyncio as aioredis
 from typing import Optional
 from lib.config import get_settings
@@ -41,11 +40,11 @@ class AsyncRedisManager:
 
                 # redis-py automatically handles SSL when URL starts with rediss://
                 # No manual SSL configuration needed for Upstash
-                if redis_url.startswith('rediss://'):
+                if redis_url.startswith("rediss://"):
                     log.info("Using TLS for Redis connection")
 
                 cls._instance = await aioredis.from_url(redis_url, **connection_kwargs)
-                
+
                 # Test connection
                 await cls._instance.ping()
                 log.info("Async Redis connection established")

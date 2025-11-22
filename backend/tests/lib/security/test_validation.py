@@ -9,8 +9,8 @@ Covers:
 """
 
 import pytest
-from api.security.validator import CodeValidator
-from api.security.python_ast_validator import PythonASTValidator
+from lib.security.validator import CodeValidator
+from lib.security.python_ast_validator import PythonASTValidator
 
 
 class TestPythonSecurityValidation:

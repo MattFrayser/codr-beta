@@ -7,9 +7,9 @@ class JavaScriptExecutor(BaseExecutor):
 
     def _build_command(self, filepath: str, workdir: str) -> List[str]:
         return [
-            'node',
-            '--max-old-space-size=64',  # 64MB heap limit
-            '--no-concurrent-recompilation',
-            '--single-threaded-gc',
-            filepath
+            "node",
+            "--max-old-space-size=64",  # 64MB heap limit
+            "--no-concurrent-recompilation",
+            "--single-threaded-gc",
+            filepath,
         ]

@@ -1,6 +1,6 @@
 """
 Infrastructure for parsing and validating code using
-Abstract Syntax Tree (AST) analysis via tree-sitter. 
+Abstract Syntax Tree (AST) analysis via tree-sitter.
 Significantly more accurate than regex-based validation.
 """
 
@@ -13,6 +13,7 @@ import tree_sitter_c as ts_c
 import tree_sitter_cpp as ts_cpp
 import tree_sitter_rust as ts_rust
 
+
 class TreeSitterParser:
 
     def __init__(self):
@@ -22,12 +23,12 @@ class TreeSitterParser:
 
     def _load_languages(self):
         language_modules = {
-            'javascript': ts_javascript,
-            'js': ts_javascript,
-            'c': ts_c,
-            'cpp': ts_cpp,
-            'c++': ts_cpp,
-            'rust': ts_rust,
+            "javascript": ts_javascript,
+            "js": ts_javascript,
+            "c": ts_c,
+            "cpp": ts_cpp,
+            "c++": ts_cpp,
+            "rust": ts_rust,
         }
 
         for lang_key, module in language_modules.items():
@@ -57,7 +58,7 @@ class TreeSitterParser:
             raise ValueError(f"Unsupported language for AST parsing: {language}")
 
         parser = self.parsers[language]
-        tree = parser.parse(bytes(code, 'utf8'))
+        tree = parser.parse(bytes(code, "utf8"))
 
         if tree.root_node.has_error:
             raise Exception("Syntax error in code")
@@ -124,7 +125,7 @@ class ASTWalker:
 
     @staticmethod
     def get_node_text(node: Node, code: bytes) -> str:
-        return code[node.start_byte:node.end_byte].decode('utf8')
+        return code[node.start_byte:node.end_byte].decode("utf8")
 
     @staticmethod
     def find_child_by_type(node: Node, child_type: str) -> Optional[Node]:

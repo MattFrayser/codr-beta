@@ -9,7 +9,7 @@ Covers:
 """
  
 import pytest
-from executors.rust import RustExecutor
+from lib.executors.rust import RustExecutor
  
  
 class TestRustExecutor:

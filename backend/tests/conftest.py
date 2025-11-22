@@ -19,6 +19,7 @@ sys.path.insert(0, str(backend_dir))
 # Set test environment variables
 os.environ["ENV"] = "testing"
 os.environ["API_KEY"] = "test-api-key-12345"
+os.environ["JWT_SECRET"] = "test-secret-key-for-testing"
 os.environ["REDIS_URL"] = "redis://localhost:6379/1"
 os.environ["EXECUTION_TIMEOUT"] = "5"
 
@@ -42,11 +43,12 @@ def event_loop():
 @pytest.fixture
 def test_settings():
     """Provide test settings"""
-    from config.settings import AppSettings
+    from lib.config.settings import AppSettings
 
     return AppSettings(
         env="testing",
         api_key="test-api-key-12345",
+        jwt_secret="test-secret-key-for-testing",
         host="127.0.0.1",
         port=8000,
         execution_timeout=5,
@@ -86,7 +88,7 @@ async def redis_client(mock_redis):
 @pytest.fixture
 async def job_service(redis_client):
     """Provide JobService instance with mock Redis"""
-    from api.services.job_service import JobService
+    from lib.services.job_service import JobService
 
     service = JobService(redis_client)
     return service
@@ -95,17 +97,9 @@ async def job_service(redis_client):
 @pytest.fixture
 def pubsub_service():
     """Provide PubSubService instance"""
-    from api.services.pubsub_service import PubSubService
+    from lib.services.pubsub_service import PubSubService
 
     return PubSubService()
-
-
-@pytest.fixture
-def execution_service(job_service):
-    """Provide ExecutionService instance"""
-    from api.services.execution_service import ExecutionService
-
-    return ExecutionService(job_service)
 
 
 # ============================================================================
@@ -115,7 +109,7 @@ def execution_service(job_service):
 @pytest.fixture
 def python_executor():
     """Provide PythonExecutor instance"""
-    from executors.python import PythonExecutor
+    from lib.executors.python import PythonExecutor
 
     return PythonExecutor()
 
@@ -123,7 +117,7 @@ def python_executor():
 @pytest.fixture
 def javascript_executor():
     """Provide JavaScriptExecutor instance"""
-    from executors.javascript import JavaScriptExecutor
+    from lib.executors.javascript import JavaScriptExecutor
 
     return JavaScriptExecutor()
 
@@ -131,7 +125,7 @@ def javascript_executor():
 @pytest.fixture
 def c_executor():
     """Provide CExecutor instance"""
-    from executors.c import CExecutor
+    from lib.executors.c import CExecutor
 
     return CExecutor()
 
@@ -139,7 +133,7 @@ def c_executor():
 @pytest.fixture
 def cpp_executor():
     """Provide CppExecutor instance"""
-    from executors.cpp import CppExecutor
+    from lib.executors.cpp import CppExecutor
 
     return CppExecutor()
 
@@ -147,7 +141,7 @@ def cpp_executor():
 @pytest.fixture
 def rust_executor():
     """Provide RustExecutor instance"""
-    from executors.rust import RustExecutor
+    from lib.executors.rust import RustExecutor
 
     return RustExecutor()
 
@@ -159,7 +153,7 @@ def rust_executor():
 @pytest.fixture
 def code_validator():
     """Provide CodeValidator instance"""
-    from api.security.validator import CodeValidator
+    from lib.security.validator import CodeValidator
 
     return CodeValidator()
 
@@ -167,7 +161,7 @@ def code_validator():
 @pytest.fixture
 def python_validator():
     """Provide PythonASTValidator instance"""
-    from api.security.python_ast_validator import PythonASTValidator
+    from lib.security.python_ast_validator import PythonASTValidator
 
     return PythonASTValidator()
 

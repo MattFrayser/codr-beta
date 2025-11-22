@@ -8,7 +8,7 @@ Covers:
 """
  
 import pytest
-from executors.javascript import JavaScriptExecutor
+from lib.executors.javascript import JavaScriptExecutor
  
  
 class TestJavaScriptExecutor:

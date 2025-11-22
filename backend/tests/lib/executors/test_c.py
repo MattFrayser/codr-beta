@@ -9,7 +9,7 @@ Covers:
 """
  
 import pytest
-from executors.c import CExecutor
+from lib.executors.c import CExecutor
  
  
 class TestCExecutor:

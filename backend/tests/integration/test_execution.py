@@ -9,8 +9,8 @@ Covers:
 """
  
 import pytest
-from api.security.validator import CodeValidator
-from executors import get_executor
+from lib.security.validator import CodeValidator
+from lib.executors import get_executor
  
  
 class TestExecutorIntegration:
@@ -69,7 +69,7 @@ class TestExecutorFactory:
  
     def test_gets_python_executor(self):
         """Should return Python executor for 'python' language"""
-        from executors.python import PythonExecutor
+        from lib.executors.python import PythonExecutor
  
         executor = get_executor("python")
  
@@ -77,7 +77,7 @@ class TestExecutorFactory:
  
     def test_gets_javascript_executor(self):
         """Should return JavaScript executor for 'javascript' language"""
-        from executors.javascript import JavaScriptExecutor
+        from lib.executors.javascript import JavaScriptExecutor
  
         executor = get_executor("javascript")
  
@@ -85,7 +85,7 @@ class TestExecutorFactory:
  
     def test_gets_c_executor(self):
         """Should return C executor for 'c' language"""
-        from executors.c import CExecutor
+        from lib.executors.c import CExecutor
  
         executor = get_executor("c")
  

@@ -5,15 +5,8 @@ Starts the FastAPI application w/ middleware and routes configured.
 
 # Load environment first
 from dotenv import load_dotenv
+
 load_dotenv()
-
-import sys
-import os
-
-# Add lib to path for shared imports
-lib_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib')
-if lib_dir not in sys.path:
-    sys.path.insert(0, lib_dir)
 
 import uvicorn
 
@@ -33,14 +26,15 @@ from .middleware.rate_limiter import limiter
 from lib.redis import AsyncRedisManager, get_async_redis
 from lib.services import JobService
 from lib.config import get_settings
+settings = get_settings()
+
 from lib.logger import log
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """ Application lifecycle manager (startup and shutdown events) """
- 
-    settings = get_settings()
+    """Application lifecycle manager (startup and shutdown events)"""
+
     try:
         redis_client = await get_async_redis()
     except Exception as e:
@@ -49,7 +43,7 @@ async def lifespan(app: FastAPI):
 
     app.state.job_service = JobService(redis_client)
 
-    if not settings.api_key and setting.env != 'development':
+    if not settings.api_key and settings.env != "development":
         log.error("API key not set")
         raise
 
@@ -60,17 +54,17 @@ async def lifespan(app: FastAPI):
     log.info("Shutting down websocket server...")
     await AsyncRedisManager.close_connection()
 
+
 def create_app() -> FastAPI:
-    """ Create FastAPI app """
- 
-    settings = get_settings()
+    """Create FastAPI app"""
+
     app = FastAPI(
         title="Codr API",
         description="Secure code execution API with sandboxing",
         version="2.0.0",
         lifespan=lifespan,
     )
- 
+
     # Add rate limiter to app state
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -83,10 +77,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-
     # Add API key middleware
     app.add_middleware(APIKeyMiddleware)
-
 
     # Include routers
     app.include_router(websocket_router, tags=["WebSocket Execution"])
@@ -102,10 +94,9 @@ def create_app() -> FastAPI:
             "endpoints": {
                 "websocket": "WS /ws/execute",
                 "health": "GET /health",
-                "status": "GET /api/websocket/status"
+                "status": "GET /api/websocket/status",
             },
         }
-
 
     # Health check endpoint
     @app.get("/health")
@@ -121,23 +112,17 @@ def create_app() -> FastAPI:
             content={
                 "status": "healthy" if redis_healthy else "unhealthy",
                 "service": "codr-api",
-                "redis": "connected" if redis_healthy else "disconnected"
-            }
+                "redis": "connected" if redis_healthy else "disconnected",
+            },
         )
-    
-    return app
 
+    return app
 
 
 if __name__ == "__main__":
 
     app = create_app()
 
-    settings = get_settings()
     uvicorn.run(
-        app,
-        host=settings.host,
-        port=settings.port,
-        reload=False,
-        log_level="info"
+        app, host=settings.host, port=settings.port, reload=False, log_level="info"
     )

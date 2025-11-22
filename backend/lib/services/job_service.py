@@ -40,11 +40,11 @@ class JobService:
             "language": language,
             "filename": filename,
             "status": "queued",
-            "created_at": created_at
+            "created_at": created_at,
         }
 
         job_key = self._job_key(job_id)
-        await self.redis.hset(job_key, mapping=job_data)
+        await self.redis.hset(job_key, mapping=job_data)  # type: ignore[misc]
 
         # Set TTL on job metadata
         await self.redis.expire(job_key, self.settings.redis_ttl)
@@ -57,15 +57,15 @@ class JobService:
             JobResult model or None if not found
         """
         job_key = self._job_key(job_id)
-        job_data = await self.redis.hgetall(job_key)
+        job_data = await self.redis.hgetall(job_key)  # type: ignore[misc]
 
         if not job_data:
             return None
 
-        result = job_data.get('result')
+        result = job_data.get("result")
         if result:
             try:
-                job_data['result'] = json.loads(result)
+                job_data["result"] = json.loads(result)
             except (json.JSONDecodeError, TypeError):
                 pass
 
@@ -73,7 +73,7 @@ class JobService:
 
     async def mark_processing(self, job_id: str) -> None:
         job_key = self._job_key(job_id)
-        await self.redis.hset(job_key, "status", "processing")
+        await self.redis.hset(job_key, "status", "processing")  # type: ignore[misc]
 
     async def mark_completed(self, job_id: str, result: dict) -> None:
         job_key = self._job_key(job_id)
@@ -86,7 +86,7 @@ class JobService:
         pipe.hset(job_key, "completed_at", completed_at)
         await pipe.execute()
 
-    async def mark_failed(self, job_id: str, error: str, result: dict = None) -> None:
+    async def mark_failed(self, job_id: str, error: str, result: Optional[dict] = None) -> None:
         job_key = self._job_key(job_id)
 
         pipe = self.redis.pipeline()
@@ -104,6 +104,6 @@ class JobService:
 
     async def get_job_status(self, job_id: str) -> Optional[str]:
         job_key = self._job_key(job_id)
-        status = await self.redis.hget(job_key, "status")
+        status = await self.redis.hget(job_key, "status")  # type: ignore[misc]
 
         return status if status else None

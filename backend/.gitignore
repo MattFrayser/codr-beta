@@ -12,4 +12,7 @@ htmlcov
 coverage.xml
 .pytest_cache
 
+# Formatting
+.flake8
+mypy.ini
 

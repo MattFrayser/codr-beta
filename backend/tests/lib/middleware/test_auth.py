@@ -11,7 +11,7 @@ Covers:
 import pytest
 from fastapi import HTTPException
 from unittest.mock import Mock
-from api.middleware.auth import verify_api_key, APIKeyMiddleware
+from services.websocket.middleware.auth import verify_api_key, APIKeyMiddleware
 
 
 class TestAPIKeyValidation:

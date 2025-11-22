@@ -2,9 +2,8 @@
 Real-time communication between executors and WebSocket clients
 """
 
-import asyncio
 import json
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Dict, Any, Awaitable
 import redis.asyncio as aioredis
 from lib.redis import get_async_redis
 from lib.logger import log
@@ -24,40 +23,35 @@ class PubSubService:
         """
         redis = await get_async_redis()
         channel = self._output_channel(job_id)
-        message = json.dumps({
-            "type": "output",
-            "stream": stream,
-            "data": data
-        })
+        message = json.dumps({"type": "output", "stream": stream, "data": data})
         await redis.publish(channel, message)
         log.debug(f"Published to {channel}: {stream}")
 
-    async def publish_complete(self, job_id: str, exit_code: int, execution_time: float):
+    async def publish_complete(
+        self, job_id: str, exit_code: int, execution_time: float
+    ):
         redis = await get_async_redis()
         channel = self._complete_channel(job_id)
-        message = json.dumps({
-            "type": "complete",
-            "exit_code": exit_code,
-            "execution_time": execution_time
-        })
+        message = json.dumps(
+            {
+                "type": "complete",
+                "exit_code": exit_code,
+                "execution_time": execution_time,
+            }
+        )
         await redis.publish(channel, message)
         log.info(f"Published completion for job {job_id}")
 
     async def publish_error(self, job_id: str, error_message: str):
         redis = await get_async_redis()
         channel = self._output_channel(job_id)
-        message = json.dumps({
-            "type": "error",
-            "message": error_message
-        })
+        message = json.dumps({"type": "error", "message": error_message})
         await redis.publish(channel, message)
         log.error(f"Published error for job {job_id}: {error_message}")
 
     async def subscribe_to_channels(
-        self,
-        job_id: str,
-        on_message: Callable[[Dict[str, Any]], None]
-    ):
+        self, job_id: str, on_message: Callable[[Dict[str, Any]], Awaitable[None]]
+    ) -> None:
         """
         Subscribe to all job-related channels and handle messages
 
@@ -68,10 +62,7 @@ class PubSubService:
         redis = await get_async_redis()
         pubsub = redis.pubsub()
 
-        channels = [
-            self._output_channel(job_id),
-            self._complete_channel(job_id)
-        ]
+        channels = [self._output_channel(job_id), self._complete_channel(job_id)]
 
         await pubsub.subscribe(*channels)
         self._pubsubs[job_id] = pubsub
@@ -117,8 +108,10 @@ class PubSubService:
     def _complete_channel(self, job_id: str) -> str:
         return f"job:{job_id}:complete"
 
+
 # Singleton instance
 _pubsub_service: Optional[PubSubService] = None
+
 
 def get_pubsub_service() -> PubSubService:
     """Get or create PubSubService singleton"""
@@ -126,5 +119,3 @@ def get_pubsub_service() -> PubSubService:
     if _pubsub_service is None:
         _pubsub_service = PubSubService()
     return _pubsub_service
-
-

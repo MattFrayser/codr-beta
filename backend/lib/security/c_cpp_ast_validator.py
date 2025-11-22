@@ -21,10 +21,9 @@ from ..models.allowlist import (
 
 class CCppASTValidator(BaseASTValidator):
 
-
     def validate(self, tree: Tree, code: str) -> Tuple[bool, str]:
 
-        self.code_bytes = bytes(code, 'utf8')
+        self.code_bytes = bytes(code, "utf8")
         root = tree.root_node
 
         # Check for dangerous function calls
@@ -46,7 +45,7 @@ class CCppASTValidator(BaseASTValidator):
 
     def _check_function_calls(self, root: Node) -> Tuple[bool, str]:
 
-        calls = self.walker.find_nodes_by_type(root, 'call_expression')
+        calls = self.walker.find_nodes_by_type(root, "call_expression")
 
         for call in calls:
             func_name = self._get_function_name(call)
@@ -59,7 +58,7 @@ class CCppASTValidator(BaseASTValidator):
                 return False, f"Blocked function: {func_name}()"
 
             # Also check for common variations
-            if func_name.startswith('exec') or func_name.startswith('_exec'):
+            if func_name.startswith("exec") or func_name.startswith("_exec"):
                 return False, f"Blocked function: {func_name}()"
 
         return True, ""
@@ -67,7 +66,7 @@ class CCppASTValidator(BaseASTValidator):
     def _check_includes(self, root: Node) -> Tuple[bool, str]:
 
         # Find all preprocessor include directives
-        includes = self.walker.find_nodes_by_type(root, 'preproc_include')
+        includes = self.walker.find_nodes_by_type(root, "preproc_include")
 
         for include in includes:
             header_path = self._get_include_path(include)
@@ -97,9 +96,11 @@ class CCppASTValidator(BaseASTValidator):
             node_text = self._get_node_text(node)
 
             # Check for inline assembly keywords
-            if 'asm' in node_text.lower() and ('__asm' in node_text or 'asm(' in node_text):
+            if "asm" in node_text.lower() and (
+                "__asm" in node_text or "asm(" in node_text
+            ):
                 # Make sure it's not in a comment or string
-                if node.type not in ['comment', 'string_literal', 'char_literal']:
+                if node.type not in ["comment", "string_literal", "char_literal"]:
                     return False, "Inline assembly not allowed"
 
         return True, ""
@@ -117,21 +118,21 @@ class CCppASTValidator(BaseASTValidator):
         Returns:
             Function name or None
         """
-        function = self._find_child_by_field(call_node, 'function')
+        function = self._find_child_by_field(call_node, "function")
         if not function:
             return None
 
-        if function.type == 'identifier':
+        if function.type == "identifier":
             return self._get_node_text(function)
-        elif function.type == 'field_expression':
+        elif function.type == "field_expression":
             # obj.method or obj->method
-            field = self._find_child_by_field(function, 'field')
+            field = self._find_child_by_field(function, "field")
             if field:
                 return self._get_node_text(field)
-        elif function.type == 'pointer_expression':
+        elif function.type == "pointer_expression":
             # Function pointer dereference
-            argument = self._find_child_by_field(function, 'argument')
-            if argument and argument.type == 'identifier':
+            argument = self._find_child_by_field(function, "argument")
+            if argument and argument.type == "identifier":
                 return self._get_node_text(argument)
 
         return None
@@ -140,7 +141,7 @@ class CCppASTValidator(BaseASTValidator):
 
         # Find the string literal or system_lib_string child
         for child in include_node.children:
-            if child.type in ['string_literal', 'system_lib_string']:
+            if child.type in ["string_literal", "system_lib_string"]:
                 text = self._get_node_text(child)
                 # Remove quotes or angle brackets
                 text = text.strip('"<>')

@@ -43,18 +43,16 @@ class CodeValidator:
         language = language.lower()
 
         # Dispatch to appropriate validator
-        if language == 'python':
+        if language == "python":
             return validator.python_validator.validate(code)
-        elif language in ['javascript', 'js']:
-            tree = validator.ts_parser.parse(code, 'javascript')
+        elif language in ["javascript", "js"]:
+            tree = validator.ts_parser.parse(code, "javascript")
             return validator.js_validator.validate(tree, code)
-        elif language in ['c', 'cpp', 'c++']:
-            tree = validator.ts_parser.parse(code, 'cpp')
+        elif language in ["c", "cpp", "c++"]:
+            tree = validator.ts_parser.parse(code, "cpp")
             return validator.c_validator.validate(tree, code)
-        elif language == 'rust':
-            tree = validator.ts_parser.parse(code, 'rust')
+        elif language == "rust":
+            tree = validator.ts_parser.parse(code, "rust")
             return validator.rust_validator.validate(tree, code)
         else:
             return False, f"Unsupported language: {language}"
-
-

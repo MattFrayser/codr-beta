@@ -8,7 +8,7 @@ Covers:
 """
  
 import pytest
-from executors.python import PythonExecutor
+from lib.executors.python import PythonExecutor
  
  
 class TestPythonExecutor:

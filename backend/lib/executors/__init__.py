@@ -1,5 +1,4 @@
 from .base import BaseExecutor
-from .compiled_base import CompiledExecutor
 from .python import PythonExecutor
 from .javascript import JavaScriptExecutor
 from .rust import RustExecutor
@@ -7,12 +6,12 @@ from .c import CExecutor
 from .cpp import CppExecutor
 
 EXECUTORS = {
-    'python': PythonExecutor,
-    'javascript': JavaScriptExecutor,
-    'rust': RustExecutor,
-    'c': CExecutor,
-    'cpp': CppExecutor,
-    'c++': CppExecutor,  # Alias for cpp
+    "python": PythonExecutor,
+    "javascript": JavaScriptExecutor,
+    "rust": RustExecutor,
+    "c": CExecutor,
+    "cpp": CppExecutor,
+    "c++": CppExecutor,  # Alias for cpp
 }
 
 LANGUAGE_EXTENSIONS = {
@@ -20,12 +19,12 @@ LANGUAGE_EXTENSIONS = {
     "javascript": ".js",
     "c": ".c",
     "cpp": ".cpp",
-    "rust": ".rs"
+    "rust": ".rs",
 }
+
 
 def get_default_filename(language: str) -> str:
     return f"main{LANGUAGE_EXTENSIONS.get(language, '.txt')}"
-
 
 
 def get_executor(language: str) -> BaseExecutor:
@@ -45,13 +44,12 @@ def get_executor(language: str) -> BaseExecutor:
     executor_class = EXECUTORS.get(language)
 
     if not executor_class:
-        supported = ', '.join(sorted(set(EXECUTORS.keys())))
+        supported = ", ".join(sorted(set(EXECUTORS.keys())))
         raise ValueError(
-            f"Unsupported language: {language}. "
-            f"Supported languages: {supported}"
+            f"Unsupported language: {language}. " f"Supported languages: {supported}"
         )
 
-    return executor_class()
+    return executor_class()  # type: ignore[abstract]
 
 
 def get_supported_languages() -> set:
@@ -68,9 +66,10 @@ def get_supported_languages() -> set:
     """
     return set(EXECUTORS.keys())
 
+
 __all__ = [
-    'BaseExecutor',
-    'get_executor',
-    'get_supported_languages',
-    'get_default_filename',
+    "BaseExecutor",
+    "get_executor",
+    "get_supported_languages",
+    "get_default_filename",
 ]

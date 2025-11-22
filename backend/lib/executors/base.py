@@ -5,31 +5,31 @@ import re
 import time
 import traceback
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Callable
 
 from lib.config import get_settings
 from lib.logger import log
 from lib.models import ExecutionResult
-
+from lib.utils import format_error_message
 
 
 class BaseExecutor(ABC):
     """Base class for language-specific code executors"""
 
     def __init__(self):
-            settings = get_settings()
-            self.timeout = settings.execution_timeout
-            self.maxMemory = settings.max_memory_mb
-            self.maxFileSize =  settings.max_file_size_mb
-            self.env = settings.env
+        settings = get_settings()
+        self.timeout = settings.execution_timeout
+        self.maxMemory = settings.max_memory_mb
+        self.maxFileSize = settings.max_file_size_mb
+        self.env = settings.env
 
     def execute(
         self,
         code: str,
         filename: str,
         on_output: Callable[[bytes], None],
-        input_queue: Any
-    ) -> Dict[str, Any]:
+        input_queue: Any,
+    ) -> ExecutionResult:
         """
         Execute code with PTY streaming
 
@@ -45,9 +45,7 @@ class BaseExecutor(ABC):
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = self._writeToFile(tmpdir, code, filename)
             command = self._build_command(filepath, tmpdir)
-            result = self._execute_pty(
-                command, tmpdir, on_output, input_queue
-            )
+            result = self._execute_pty(command, tmpdir, on_output, input_queue)
             return result
 
     def _writeToFile(self, tmpDir: str, code: str, filename: str) -> str:
@@ -60,19 +58,19 @@ class BaseExecutor(ABC):
         self._validateFileName(filename)
         filepath = os.path.join(tmpDir, filename)
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(code)
 
         return filepath
 
     def _validateFileName(self, filename: str):
-        """ Validates file name uses appropriate characters """
+        """Validates file name uses appropriate characters"""
 
-        if not re.match(r'^[a-zA-Z0-9_.-]+$', filename):
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", filename):
             raise ValueError(f"Invalid filename: {filename}")
 
         # Prevent any Traversal
-        if '..' in filename or filename.startswith('/'):
+        if ".." in filename or filename.startswith("/"):
             raise ValueError(f"Invalid filename: {filename}")
 
     def _build_sandbox_command(self, command: List[str], workdir: str) -> List[str]:
@@ -87,35 +85,34 @@ class BaseExecutor(ABC):
             Complete firejail command with restrictions
         """
         return [
-            '/usr/bin/firejail',
-            '--profile=/etc/firejail/sandbox.profile',
-            f'--private={workdir}',
-            '--net=none',
-            '--nodbus',
-            '--noroot',
-            f'--rlimit-as={self.maxMemory * 1024 * 1024}',
-            f'--rlimit-cpu={self.timeout}',
-            f'--rlimit-fsize={self.maxFileSize * 1024 * 1024}',
-            f'--timeout=00:00:{self.timeout:02d}',
+            "/usr/bin/firejail",
+            "--quiet", # Suppress warning that were in docker container
+            "--profile=/etc/firejail/sandbox.profile",
+            "--nodbus",
+            f"--rlimit-as={self.maxMemory * 1024 * 1024}",
+            f"--rlimit-cpu={self.timeout}",
+            f"--rlimit-fsize={self.maxFileSize * 1024 * 1024}",
+            f"--timeout=00:00:{self.timeout:02d}",
         ] + command
 
-    def _format_error_result(self, error: Exception, execution_time: float) -> Dict[str, Any]:
+    def _format_error_result(
+        self, error: Exception, execution_time: float
+    ) -> ExecutionResult:
         return ExecutionResult(
             success=False,
             stdout="",
             stderr=f"Execution error: {str(error)}",
             exit_code=-1,
-            execution_time=execution_time
+            execution_time=execution_time,
         )
-
 
     def _execute_pty(
         self,
         command: List[str],
         workdir: str,
         on_output: Callable[[bytes], None],
-        input_queue: Any
-    ) -> Dict[str, Any]:
+        input_queue: Any,
+    ) -> ExecutionResult:
         """
         Simple bidirectional pipe:
         - PTY output → on_output callback (sent to WebSocket)
@@ -143,18 +140,18 @@ class BaseExecutor(ABC):
             master_fd, slave_fd = pty.openpty()
 
             # Set terminal size
-            winsize = struct.pack('HHHH', 24, 80, 0, 0)
+            winsize = struct.pack("HHHH", 24, 80, 0, 0)
             fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsize)
 
             sandbox_command = self._build_sandbox_command(command, workdir)
 
             process = subprocess.Popen(
-                command, 
+                sandbox_command,
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
                 cwd=workdir,
-                preexec_fn=os.setsid
+                preexec_fn=os.setsid,
             )
 
             os.close(slave_fd)
@@ -164,7 +161,6 @@ class BaseExecutor(ABC):
             fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
             complete_output = b""
-
 
             while True:
                 # Check if process finished
@@ -179,7 +175,7 @@ class BaseExecutor(ABC):
                                 break
                             complete_output += data
                             on_output(data)
-                    except:
+                    except OSError:
                         pass
                     break
 
@@ -191,22 +187,25 @@ class BaseExecutor(ABC):
                         data = os.read(master_fd, 4096)
                         if data:
                             complete_output += data
-                            on_output(data)  # Stream immediately to WebSocket
+                            cleaned_data = self._clean_output(data, workdir)
+                            on_output(
+                                cleaned_data.encode("utf-8")
+                            )  # Stream immediately to WebSocket
                     except OSError:
                         pass
 
                 # Check for user input (non-blocking)
                 try:
                     user_input = input_queue.get_nowait()
-                    os.write(master_fd, user_input.encode('utf-8'))
-                except:
+                    os.write(master_fd, user_input.encode("utf-8"))
+                except Exception:
                     # Queue empty, continue
                     pass
 
                 # Timeout
                 if time.time() - start_time > self.timeout:
                     process.kill()
-                    process.wait() # wait for terminate before break
+                    process.wait()  # wait for terminate before break
                     break
 
             os.close(master_fd)
@@ -218,15 +217,40 @@ class BaseExecutor(ABC):
                 success=process.returncode == 0,
                 exit_code=return_code,
                 execution_time=execution_time,
-                stdout=complete_output.decode('utf-8', errors='replace'),
-                stderr=""
+                stdout=complete_output.decode("utf-8", errors="replace"),
+                stderr="",
             )
 
         except Exception as e:
-            if self.env == 'development': 
+            if self.env == "development":
                 traceback.print_exc()
             execution_time = time.time() - start_time
             return self._format_error_result(e, execution_time)
+
+    def _clean_output(self, data: bytes, workdir: str) -> str:
+
+        try:
+            text = data.decode("utf-8", errors="replace")
+
+            # Only format looks error (contains "Error" or "Traceback")
+            if "Error:" in text or "Traceback" in text or "Exception" in text:
+                # Determine language from command (stored in self if needed)
+                # For now, detect from error format
+                language = (
+                    "javascript" if "Error:" in text and "at " in text else "python"
+                )
+                text = format_error_message(text, language, workdir)
+            else:
+                # Just strip ANSI codes from regular output
+                from lib.utils.output_formatter import strip_ansi_codes
+
+                text = strip_ansi_codes(text)
+
+            return text
+        except Exception as e:
+            # If cleaning fails, return original
+            log.warning(f"Failed to clean output: {e}")
+            return data.decode("utf-8", errors="replace")
 
     @abstractmethod
     def _build_command(self, filepath: str, workdir: str) -> List[str]:

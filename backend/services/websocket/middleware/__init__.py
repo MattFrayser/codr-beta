@@ -1,4 +1,3 @@
-
 from .jwt_manager import JobTokenManager, get_token_manager
 from .auth import (
     APIKeyMiddleware,
@@ -19,11 +18,9 @@ __all__ = [
     "api_key_header",
     "API_KEY_NAME",
     "get_token_manager",
-    'JobTokenManager',
-    
+    "JobTokenManager",
     # Rate limiting
     "limiter",
     "SUBMIT_RATE_LIMIT",
     "STREAM_RATE_LIMIT",
 ]
-

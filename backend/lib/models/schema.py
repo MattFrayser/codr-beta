@@ -4,27 +4,33 @@ from typing import Optional
 
 class CodeSubmission(BaseModel):
 
-    code: str = Field(..., min_length=1, max_length=10240, description="Code to execute (max 10KB)")
+    code: str = Field(
+        ..., min_length=1, max_length=10240, description="Code to execute (max 10KB)"
+    )
     language: str = Field(..., description="Programming language")
     filename: str = Field(..., description="File name with extension")
 
-    @field_validator('language')
+    @field_validator("language")
     @classmethod
-    def validate_language(cls, v):  
+    def validate_language(cls, v):
         from lib.executors import get_supported_languages
+
         supported = get_supported_languages()
         if v.lower() not in supported:
-            supported_list = ', '.join(sorted(supported))
+            supported_list = ", ".join(sorted(supported))
             raise ValueError(f"Language must be one of: {supported_list}")
         return v.lower()
 
-    @field_validator('filename')
+    @field_validator("filename")
     @classmethod
     def validate_filename(cls, v):
         import re
-        if not re.match(r'^[a-zA-Z0-9_.-]+$', v):
-            raise ValueError("Filename can only contain alphanumeric characters, dots, hyphens, and underscores")
-        if '..' in v or v.startswith('/'):
+
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", v):
+            raise ValueError(
+                "Filename can only contain alphanumeric characters, dots, hyphens, and underscores"
+            )
+        if ".." in v or v.startswith("/"):
             raise ValueError("Invalid filename: path traversal detected")
         if len(v) > 255:
             raise ValueError("Filename too long (max 255 characters)")
@@ -35,7 +41,7 @@ class CodeSubmission(BaseModel):
             "example": {
                 "code": "print('Hello, World!')",
                 "language": "python",
-                "filename": "hello.py"
+                "filename": "hello.py",
             }
         }
     )
@@ -53,7 +59,7 @@ class JobResponse(BaseModel):
             "example": {
                 "job_id": "abc123",
                 "status": "queued",
-                "message": "Job submitted successfully"
+                "message": "Job submitted successfully",
             }
         }
     )
@@ -67,7 +73,9 @@ class JobResult(BaseModel):
     code: Optional[str] = None
     language: Optional[str] = None
     filename: Optional[str] = None
-    result: Optional[dict] = None  # {success, stdout, stderr, exit_code, execution_time}
+    result: Optional[dict] = (
+        None  # {success, stdout, stderr, exit_code, execution_time}
+    )
     error: Optional[str] = None
     created_at: Optional[str] = None
 
@@ -83,20 +91,22 @@ class JobResult(BaseModel):
                     "stdout": "Hello, World!\n",
                     "stderr": "",
                     "exit_code": 0,
-                    "execution_time": 0.123
-                }
+                    "execution_time": 0.123,
+                },
             }
         }
     )
 
+
 class ExecutionResult(BaseModel):
     """Model for code execution results"""
+
     success: bool
     stdout: str = ""
     stderr: str = ""
     exit_code: int
     execution_time: float
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -104,7 +114,7 @@ class ExecutionResult(BaseModel):
                 "stdout": "Hello, World!\n",
                 "stderr": "",
                 "exit_code": 0,
-                "execution_time": 0.123
+                "execution_time": 0.123,
             }
         }
     )

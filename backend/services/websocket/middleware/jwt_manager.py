@@ -1,8 +1,10 @@
 """JWT token management for job authentication."""
+
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 from fastapi import HTTPException
 from lib.config.settings import get_settings
 from lib.redis import get_async_redis
@@ -37,15 +39,13 @@ class JobTokenManager:
 
         # Sign the token
         token = jwt.encode(
-            payload,
-            self.settings.jwt_secret,
-            algorithm=self.settings.jwt_algorithm
+            payload, self.settings.jwt_secret, algorithm=self.settings.jwt_algorithm
         )
 
         return {
             "job_id": job_id,
             "job_token": token,
-            "expires_at": expiration.isoformat()
+            "expires_at": expiration.isoformat(),
         }
 
     def verify_job_token(self, token: str, expected_job_id: str) -> Dict:
@@ -67,28 +67,19 @@ class JobTokenManager:
             payload = jwt.decode(
                 token,
                 self.settings.jwt_secret,
-                algorithms=[self.settings.jwt_algorithm]
+                algorithms=[self.settings.jwt_algorithm],
             )
 
             # Verify job_id matches
             if payload.get("job_id") != expected_job_id:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Token job_id mismatch"
-                )
+                raise HTTPException(status_code=403, detail="Token job_id mismatch")
 
             return payload
 
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(
-                status_code=401,
-                detail="Job token has expired"
-            )
+        except ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Job token has expired")
         except JWTError as e:
-            raise HTTPException(
-                status_code=401,
-                detail=f"Invalid job token: {str(e)}"
-            )
+            raise HTTPException(status_code=401, detail=f"Invalid job token: {str(e)}")
 
     async def mark_token_used(self, jti: str) -> None:
         """

@@ -9,7 +9,7 @@ Covers:
 """
 
 import pytest
-from api.services.job_service import JobService
+from lib.services.job_service import JobService
 
 
 class TestJobServiceOperations:

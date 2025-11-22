@@ -9,7 +9,7 @@ Covers:
 """
  
 import pytest
-from executors.cpp import CppExecutor
+from lib.executors.cpp import CppExecutor
  
  
 class TestCppExecutor:

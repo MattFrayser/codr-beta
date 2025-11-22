@@ -24,7 +24,7 @@ class JavaScriptASTValidator(BaseASTValidator):
 
     def validate(self, tree: Tree, code: str) -> Tuple[bool, str]:
 
-        self.code_bytes = bytes(code, 'utf8')
+        self.code_bytes = bytes(code, "utf8")
         root = tree.root_node
 
         # Check for dangerous function calls
@@ -56,7 +56,7 @@ class JavaScriptASTValidator(BaseASTValidator):
 
     def _check_call_expressions(self, root: Node) -> Tuple[bool, str]:
 
-        calls = self.walker.find_nodes_by_type(root, 'call_expression')
+        calls = self.walker.find_nodes_by_type(root, "call_expression")
 
         for call in calls:
             func_name = self._get_function_name(call)
@@ -69,7 +69,7 @@ class JavaScriptASTValidator(BaseASTValidator):
                 return False, f"Blocked operation: {func_name}()"
 
             # Check require() calls for blocked modules
-            if func_name == 'require':
+            if func_name == "require":
                 result = self._check_require_call(call)
                 if not result[0]:
                     return result
@@ -79,11 +79,11 @@ class JavaScriptASTValidator(BaseASTValidator):
     def _check_imports(self, root: Node) -> Tuple[bool, str]:
         # Check import statements
 
-        imports = self.walker.find_nodes_by_type(root, 'import_statement')
+        imports = self.walker.find_nodes_by_type(root, "import_statement")
 
         for imp in imports:
             # Get the string literal (source)
-            source = self._find_child_by_type(imp, 'string')
+            source = self._find_child_by_type(imp, "string")
             if source:
                 module_name = self._get_string_value(source)
                 if self._is_blocked_module(module_name):
@@ -93,7 +93,7 @@ class JavaScriptASTValidator(BaseASTValidator):
 
     def _check_member_expressions(self, root: Node) -> Tuple[bool, str]:
 
-        members = self.walker.find_nodes_by_type(root, 'member_expression')
+        members = self.walker.find_nodes_by_type(root, "member_expression")
 
         for member in members:
             member_text = self._get_node_text(member)
@@ -113,30 +113,30 @@ class JavaScriptASTValidator(BaseASTValidator):
         - Object.constructor
         """
         # Check member expressions for 'constructor'
-        members = self.walker.find_nodes_by_type(root, 'member_expression')
+        members = self.walker.find_nodes_by_type(root, "member_expression")
 
         for member in members:
-            property_node = self._find_child_by_field(member, 'property')
+            property_node = self._find_child_by_field(member, "property")
             if property_node:
                 prop_text = self._get_node_text(property_node)
-                if 'constructor' in prop_text:
+                if "constructor" in prop_text:
                     return False, "Constructor access not allowed"
 
         # Check subscript expressions (bracket notation)
-        subscripts = self.walker.find_nodes_by_type(root, 'subscript_expression')
+        subscripts = self.walker.find_nodes_by_type(root, "subscript_expression")
 
         for subscript in subscripts:
-            index_node = self._find_child_by_field(subscript, 'index')
+            index_node = self._find_child_by_field(subscript, "index")
             if index_node:
                 index_text = self._get_node_text(index_node)
-                if 'constructor' in index_text:
+                if "constructor" in index_text:
                     return False, "Constructor access not allowed"
 
         return True, ""
 
     def _check_identifiers(self, root: Node) -> Tuple[bool, str]:
 
-        identifiers = self.walker.find_nodes_by_type(root, 'identifier')
+        identifiers = self.walker.find_nodes_by_type(root, "identifier")
 
         for identifier in identifiers:
             name = self._get_node_text(identifier)
@@ -144,7 +144,7 @@ class JavaScriptASTValidator(BaseASTValidator):
             # Check if it's a standalone dangerous identifier
             # (not part of a member expression we already checked)
             parent = identifier.parent
-            if parent and parent.type != 'member_expression':
+            if parent and parent.type != "member_expression":
                 if name in JAVASCRIPT_BLOCKED_IDENTIFIERS:
                     return False, f"Blocked identifier: {name}"
 
@@ -156,13 +156,13 @@ class JavaScriptASTValidator(BaseASTValidator):
 
         """
         # Get the arguments node
-        arguments = self._find_child_by_type(call_node, 'arguments')
+        arguments = self._find_child_by_type(call_node, "arguments")
         if not arguments:
             return True, ""
 
         # Get first argument (module name)
         for child in arguments.children:
-            if child.type == 'string':
+            if child.type == "string":
                 module_name = self._get_string_value(child)
                 if self._is_blocked_module(module_name):
                     return False, f"Blocked module: {module_name}"
@@ -183,14 +183,14 @@ class JavaScriptASTValidator(BaseASTValidator):
         Returns:
             Function name or None
         """
-        function = self._find_child_by_field(call_node, 'function')
+        function = self._find_child_by_field(call_node, "function")
         if not function:
             return None
 
-        if function.type == 'identifier':
+        if function.type == "identifier":
             return self._get_node_text(function)
-        elif function.type == 'member_expression':
-            property_node = self._find_child_by_field(function, 'property')
+        elif function.type == "member_expression":
+            property_node = self._find_child_by_field(function, "property")
             if property_node:
                 return self._get_node_text(property_node)
 
@@ -218,7 +218,7 @@ class JavaScriptASTValidator(BaseASTValidator):
 
         # Check if it's trying to access a blocked module via path
         for blocked in JAVASCRIPT_BLOCKED_MODULES:
-            if module_name.startswith(f'{blocked}/'):
+            if module_name.startswith(f"{blocked}/"):
                 return True
 
         return False

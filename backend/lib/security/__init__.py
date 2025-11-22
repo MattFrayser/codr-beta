@@ -2,5 +2,5 @@
 from .validator import CodeValidator
 
 __all__ = [
-    'CodeValidator',
+    "CodeValidator",
 ]
