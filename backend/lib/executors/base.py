@@ -84,16 +84,29 @@ class BaseExecutor(ABC):
         Returns:
             Complete firejail command with restrictions
         """
-        return [
+
+
+        base_cmd = [
             "/usr/bin/firejail",
             "--quiet", # Suppress warning that were in docker container
             "--profile=/etc/firejail/sandbox.profile",
             "--nodbus",
-            f"--rlimit-as={self.maxMemory * 1024 * 1024}",
             f"--rlimit-cpu={self.timeout}",
             f"--rlimit-fsize={self.maxFileSize * 1024 * 1024}",
             f"--timeout=00:00:{self.timeout:02d}",
-        ] + command
+        ] 
+
+        # Js/Node needs more waaay more vram than other languages. 
+        is_javascript = any(
+            keyword in cmd.lower() 
+            for cmd in command 
+            for keyword in ['node', 'nodejs', 'javascript']
+        )
+
+        if not is_javascript:
+            base_cmd.append(f"--rlimit-as={self.maxMemory * 1024 * 1024}")
+        
+        return base_cmd + command
 
     def _format_error_result(
         self, error: Exception, execution_time: float
@@ -112,21 +125,7 @@ class BaseExecutor(ABC):
         workdir: str,
         on_output: Callable[[bytes], None],
         input_queue: Any,
-    ) -> ExecutionResult:
-        """
-        Simple bidirectional pipe:
-        - PTY output → on_output callback (sent to WebSocket)
-        - input_queue → PTY input (from WebSocket)
-
-        Args:
-            command: Command to execute
-            workdir: Working directory
-            on_output: Callback(bytes) - receives raw PTY output
-            input_queue: asyncio.Queue - provides user input
-
-        Returns:
-            Dict with execution results
-        """
+    ) -> Dict[str, Any]:
         import pty
         import select
         import os
@@ -138,13 +137,10 @@ class BaseExecutor(ABC):
 
         try:
             master_fd, slave_fd = pty.openpty()
-
-            # Set terminal size
             winsize = struct.pack("HHHH", 24, 80, 0, 0)
             fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsize)
 
             sandbox_command = self._build_sandbox_command(command, workdir)
-
             process = subprocess.Popen(
                 sandbox_command,
                 stdin=slave_fd,
@@ -155,30 +151,12 @@ class BaseExecutor(ABC):
             )
 
             os.close(slave_fd)
-
-            # Non-blocking master
             flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
             fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
             complete_output = b""
 
             while True:
-                # Check if process finished
-                return_code = process.poll()
-                if return_code is not None:
-                    log.debug(f"Process exited with code {return_code}")
-                    # Read any remaining output
-                    try:
-                        while True:
-                            data = os.read(master_fd, 4096)
-                            if not data:
-                                break
-                            complete_output += data
-                            on_output(data)
-                    except OSError:
-                        pass
-                    break
-
                 # Check for PTY output
                 readable, _, _ = select.select([master_fd], [], [], 0.01)
 
@@ -188,29 +166,35 @@ class BaseExecutor(ABC):
                         if data:
                             complete_output += data
                             cleaned_data = self._clean_output(data, workdir)
-                            on_output(
-                                cleaned_data.encode("utf-8")
-                            )  # Stream immediately to WebSocket
+                            on_output(cleaned_data.encode("utf-8"))
+                        else:
+                            break # Break early to not wait for cleanup
                     except OSError:
-                        pass
+                        break
 
-                # Check for user input (non-blocking)
+                # Check for user input
                 try:
                     user_input = input_queue.get_nowait()
                     os.write(master_fd, user_input.encode("utf-8"))
                 except Exception:
-                    # Queue empty, continue
                     pass
 
-                # Timeout
+                # Safety timeout
                 if time.time() - start_time > self.timeout:
                     process.kill()
-                    process.wait()  # wait for terminate before break
                     break
 
             os.close(master_fd)
-            execution_time = time.time() - start_time
+            
+            # Wait for process cleanup (but don't block UI on this)
+            # Use a short timeout so Firejail cleanup doesn't delay response
+            try:
+                process.wait(timeout=0.5)  # ← Give it 500ms max
+            except subprocess.TimeoutExpired:
+                process.kill()  # Force kill if still cleaning up
+                process.wait()
 
+            execution_time = time.time() - start_time
             return_code = process.returncode if process.returncode is not None else -1
 
             return ExecutionResult(

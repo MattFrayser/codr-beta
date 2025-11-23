@@ -40,7 +40,6 @@ read-only /sbin
 nice 10
 
 # Limit resources
-rlimit-as 300000000
 rlimit-cpu 10
 rlimit-fsize 100000
 rlimit-nproc 10

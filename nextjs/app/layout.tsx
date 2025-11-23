@@ -26,8 +26,8 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Code Sandbox",
-  description: "Python code compiler",
+  title: "Codr Online IDE",
+  description: "Online IDE for running Python, Rust, JavaScript, C, C++.",
 };
 
 export default function RootLayout({
